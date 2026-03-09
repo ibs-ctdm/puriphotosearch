@@ -31,7 +31,7 @@ class EventProcessor(QWidget):
         layout.setSpacing(15)
 
         title = QLabel("ประมวลผลโฟลเดอร์กิจกรรม")
-        title.setStyleSheet("font-size: 20px; font-weight: bold;")
+        title.setStyleSheet("font-size: 20px; font-weight: bold; color: #1D1D1F;")
         layout.addWidget(title)
 
         desc = QLabel(
@@ -39,7 +39,7 @@ class EventProcessor(QWidget):
             "ต้องทำขั้นตอนนี้ก่อนจึงจะค้นหาได้"
         )
         desc.setWordWrap(True)
-        desc.setStyleSheet("color: #666;")
+        desc.setStyleSheet("color: #86868B;")
         layout.addWidget(desc)
 
         # Folder table
@@ -60,12 +60,12 @@ class EventProcessor(QWidget):
         self.process_btn = QPushButton("ประมวลผลที่ยังไม่ได้ทำ")
         self.process_btn.setStyleSheet("""
             QPushButton {
-                background: #2196F3; color: white;
-                padding: 8px 16px; border-radius: 4px;
-                font-weight: bold;
+                background: #F5811F; color: white;
+                padding: 8px 18px; border-radius: 8px;
+                font-weight: bold; font-size: 13px; border: none;
             }
-            QPushButton:hover { background: #1976D2; }
-            QPushButton:disabled { background: #bbb; }
+            QPushButton:hover { background: #E0710A; }
+            QPushButton:disabled { background: #C7C7CC; }
         """)
         self.process_btn.clicked.connect(self._start_processing)
 
@@ -88,7 +88,7 @@ class EventProcessor(QWidget):
         self.progress_bar.setRange(0, 100)
         self.progress_label = QLabel("พร้อม")
         self.progress_detail = QLabel("")
-        self.progress_detail.setStyleSheet("color: #666;")
+        self.progress_detail.setStyleSheet("color: #86868B;")
         self.cancel_btn = QPushButton("ยกเลิก")
         self.cancel_btn.setEnabled(False)
         self.cancel_btn.clicked.connect(self._cancel_processing)

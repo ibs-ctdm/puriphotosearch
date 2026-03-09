@@ -21,12 +21,12 @@ class ProgressDialog(QDialog):
         layout = QVBoxLayout(self)
 
         self.status_label = QLabel("กำลังเริ่มต้น...")
-        self.status_label.setStyleSheet("font-size: 14px; font-weight: bold;")
+        self.status_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #1D1D1F;")
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setTextVisible(True)
         self.detail_label = QLabel("")
-        self.detail_label.setStyleSheet("color: #666;")
+        self.detail_label.setStyleSheet("color: #86868B;")
         self.cancel_button = QPushButton("ยกเลิก")
 
         layout.addWidget(self.status_label)

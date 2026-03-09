@@ -64,7 +64,7 @@ class SettingsDialog(QDialog):
         db_layout = QVBoxLayout(db_group)
 
         db_path_label = QLabel(f"ที่อยู่: {DB_PATH}")
-        db_path_label.setStyleSheet("color: #666; font-size: 11px;")
+        db_path_label.setStyleSheet("color: #86868B; font-size: 11px;")
         db_path_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         db_layout.addWidget(db_path_label)
 
@@ -87,9 +87,11 @@ class SettingsDialog(QDialog):
         save_btn = QPushButton("บันทึก")
         save_btn.setStyleSheet("""
             QPushButton {
-                background: #4CAF50; color: white;
-                padding: 6px 20px; border-radius: 4px;
+                background: #F5811F; color: white;
+                padding: 8px 24px; border-radius: 8px;
+                font-weight: bold; border: none;
             }
+            QPushButton:hover { background: #E0710A; }
         """)
         save_btn.clicked.connect(self._save)
 

@@ -21,38 +21,49 @@ class PersonCard(QWidget):
         self.person_id = person_id
         self.person_name = name
 
-        self.setFixedSize(160, 240)
+        self.setFixedSize(165, 245)
         self.setStyleSheet("""
             PersonCard {
-                border: 1px solid #ddd;
-                border-radius: 8px;
+                border: 1px solid #D2D2D7;
+                border-bottom: 2px solid #C7C7CC;
+                border-radius: 10px;
                 background: white;
             }
             PersonCard:hover {
-                border-color: #4CAF50;
+                border-color: #F5811F;
+                border-bottom-color: #F5811F;
             }
         """)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 6)
+        layout.setContentsMargins(10, 10, 10, 8)
         layout.setSpacing(4)
 
         # Thumbnail
         self.photo_label = QLabel()
         self.photo_label.setFixedSize(120, 120)
         self.photo_label.setAlignment(Qt.AlignCenter)
-        self.photo_label.setStyleSheet("border: 1px solid #eee; border-radius: 4px;")
+        self.photo_label.setStyleSheet(
+            "border: 1px solid #E8E8ED; border-radius: 8px; background: #F5F5F7;"
+        )
         layout.addWidget(self.photo_label, alignment=Qt.AlignCenter)
 
         if thumbnail:
             self._set_thumbnail(thumbnail)
         else:
             self.photo_label.setText("ไม่มีรูป")
+            self.photo_label.setStyleSheet(
+                "border: 1px solid #E8E8ED; border-radius: 8px; "
+                "background: #F5F5F7; color: #86868B; font-size: 12px;"
+            )
 
         # Name
         self.name_label = QLabel(name)
         self.name_label.setAlignment(Qt.AlignCenter)
-        self.name_label.setStyleSheet("font-weight: bold; font-size: 12px; margin-top: 4px;")
+        self.name_label.setStyleSheet(
+            "font-weight: bold; font-size: 13px; color: #1D1D1F; "
+            "margin-top: 6px; border: none;"
+        )
         self.name_label.setWordWrap(True)
         layout.addWidget(self.name_label)
 
@@ -62,7 +73,8 @@ class PersonCard(QWidget):
         self.count_btn.setFlat(True)
         self.count_btn.setCursor(Qt.PointingHandCursor)
         self.count_btn.setStyleSheet(
-            "color: #1976D2; font-size: 10px; text-decoration: underline; border: none;"
+            "color: #5BA4CF; font-size: 11px; text-decoration: underline; "
+            "border: none; background: transparent; padding: 0;"
         )
         self.count_btn.clicked.connect(
             lambda: self.manage_photos_clicked.emit(self.person_id, self.person_name)
@@ -74,13 +86,17 @@ class PersonCard(QWidget):
         btn_layout.setSpacing(4)
 
         edit_btn = QPushButton("แก้ไข")
-        edit_btn.setFixedHeight(24)
-        edit_btn.setStyleSheet("font-size: 11px;")
+        edit_btn.setFixedHeight(26)
+        edit_btn.setStyleSheet(
+            "font-size: 11px; border-radius: 6px; padding: 4px 8px;"
+        )
         edit_btn.clicked.connect(lambda: self.edit_clicked.emit(self.person_id, self.person_name))
 
         delete_btn = QPushButton("ลบ")
-        delete_btn.setFixedHeight(24)
-        delete_btn.setStyleSheet("font-size: 11px; color: #d32f2f;")
+        delete_btn.setFixedHeight(26)
+        delete_btn.setStyleSheet(
+            "font-size: 11px; color: #FF3B30; border-radius: 6px; padding: 4px 8px;"
+        )
         delete_btn.clicked.connect(lambda: self.delete_clicked.emit(self.person_id, self.person_name))
 
         btn_layout.addWidget(edit_btn)
@@ -89,9 +105,11 @@ class PersonCard(QWidget):
 
         # Button row 2: add photo
         add_photo_btn = QPushButton("+ เพิ่มรูป")
-        add_photo_btn.setFixedHeight(24)
+        add_photo_btn.setFixedHeight(26)
         add_photo_btn.setStyleSheet(
-            "font-size: 11px; color: #1976D2; font-weight: bold;"
+            "font-size: 11px; color: #F5811F; font-weight: bold; "
+            "border: 1px solid #F5811F; border-radius: 6px; "
+            "background: transparent; padding: 4px 8px;"
         )
         add_photo_btn.clicked.connect(
             lambda: self.add_photo_clicked.emit(self.person_id, self.person_name)

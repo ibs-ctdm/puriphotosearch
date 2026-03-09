@@ -38,22 +38,22 @@ class PersonManager(QWidget):
         # Header
         header_layout = QHBoxLayout()
         title = QLabel("ฐานข้อมูลบุคคล")
-        title.setStyleSheet("font-size: 20px; font-weight: bold;")
+        title.setStyleSheet("font-size: 20px; font-weight: bold; color: #1D1D1F;")
         header_layout.addWidget(title)
 
         self.count_label = QLabel("")
-        self.count_label.setStyleSheet("color: #666; font-size: 14px;")
+        self.count_label.setStyleSheet("color: #86868B; font-size: 14px;")
         header_layout.addWidget(self.count_label)
         header_layout.addStretch()
 
         self.add_btn = QPushButton("+ เพิ่มบุคคล")
         self.add_btn.setStyleSheet("""
             QPushButton {
-                background: #4CAF50; color: white;
-                padding: 8px 16px; border-radius: 4px;
-                font-weight: bold;
+                background: #F5811F; color: white;
+                padding: 8px 18px; border-radius: 8px;
+                font-weight: bold; font-size: 13px; border: none;
             }
-            QPushButton:hover { background: #45a049; }
+            QPushButton:hover { background: #E0710A; }
         """)
         self.add_btn.clicked.connect(self._add_person)
         header_layout.addWidget(self.add_btn)
@@ -62,7 +62,7 @@ class PersonManager(QWidget):
 
         desc = QLabel("อัปโหลดรูปใบหน้าที่ชัดเจนของแต่ละบุคคลที่ต้องการค้นหา")
         desc.setWordWrap(True)
-        desc.setStyleSheet("color: #666;")
+        desc.setStyleSheet("color: #86868B;")
         layout.addWidget(desc)
 
         # Scroll area for person cards
@@ -229,7 +229,7 @@ class EmbeddingsDialog(QDialog):
             "เลือก 'รูปหลัก' เพื่อใช้แสดงเป็นรูปประจำตัว  |  "
             "กด 'ลบ' เพื่อลบรูปที่ไม่ต้องการ (ต้องเหลืออย่างน้อย 1 รูป)"
         )
-        desc.setStyleSheet("color: #666;")
+        desc.setStyleSheet("color: #86868B;")
         desc.setWordWrap(True)
         layout.addWidget(desc)
 
@@ -270,10 +270,10 @@ class EmbeddingsDialog(QDialog):
         for i, emb in enumerate(self._embeddings):
             card = QWidget()
             card.setFixedSize(140, 220)
-            border_color = "#4CAF50" if emb.get("is_primary") else "#ddd"
+            border_color = "#F5811F" if emb.get("is_primary") else "#D2D2D7"
             card.setStyleSheet(
                 f"QWidget {{ border: 2px solid {border_color}; "
-                f"border-radius: 6px; background: white; }}"
+                f"border-radius: 10px; background: white; }}"
             )
             card_layout = QVBoxLayout(card)
             card_layout.setContentsMargins(6, 6, 6, 6)
@@ -283,7 +283,7 @@ class EmbeddingsDialog(QDialog):
             thumb_label = QLabel()
             thumb_label.setFixedSize(120, 120)
             thumb_label.setAlignment(Qt.AlignCenter)
-            thumb_label.setStyleSheet("border: 1px solid #eee; border-radius: 4px;")
+            thumb_label.setStyleSheet("border: 1px solid #E8E8ED; border-radius: 6px;")
             if emb.get("thumbnail"):
                 image = QImage.fromData(emb["thumbnail"])
                 if not image.isNull():
@@ -308,7 +308,7 @@ class EmbeddingsDialog(QDialog):
             # Delete button (disabled if only 1 left)
             del_btn = QPushButton("ลบ")
             del_btn.setFixedHeight(24)
-            del_btn.setStyleSheet("font-size: 11px; color: #d32f2f; border: none;")
+            del_btn.setStyleSheet("font-size: 11px; color: #FF3B30; border: none;")
             del_btn.clicked.connect(
                 lambda checked, eid=emb_id: self._delete_embedding(eid)
             )

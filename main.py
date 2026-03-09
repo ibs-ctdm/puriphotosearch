@@ -63,7 +63,7 @@ def main():
     app.setOrganizationName("PuriPhotoSearch")
 
     # Set app icon
-    icon_path = os.path.join(BUNDLE_DIR, "resources", "icon.png")
+    icon_path = os.path.join(BUNDLE_DIR, "resources", "appLogo.png")
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
 

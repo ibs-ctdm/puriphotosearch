@@ -28,7 +28,7 @@ class PhotoThumbnail(QWidget):
         self.image_label = QLabel()
         self.image_label.setFixedSize(size, size)
         self.image_label.setAlignment(Qt.AlignCenter)
-        self.image_label.setStyleSheet("border: 1px solid #ddd; border-radius: 4px;")
+        self.image_label.setStyleSheet("border: 1px solid #D2D2D7; border-radius: 6px;")
         layout.addWidget(self.image_label)
 
         # Filename label
@@ -41,7 +41,7 @@ class PhotoThumbnail(QWidget):
 
         self.info_label = QLabel(info_text)
         self.info_label.setAlignment(Qt.AlignCenter)
-        self.info_label.setStyleSheet("font-size: 10px; color: #666;")
+        self.info_label.setStyleSheet("font-size: 10px; color: #86868B;")
         layout.addWidget(self.info_label)
 
         self._load_thumbnail()
@@ -68,10 +68,10 @@ class PhotoThumbnail(QWidget):
             painter.setRenderHint(QPainter.Antialiasing)
 
             # Badge background
-            badge_color = QColor(76, 175, 80) if self.similarity >= 0.5 else QColor(255, 152, 0)
+            badge_color = QColor("#F5811F") if self.similarity >= 0.5 else QColor("#5BA4CF")
             painter.setBrush(badge_color)
             painter.setPen(Qt.NoPen)
-            painter.drawRoundedRect(4, 4, 45, 20, 4, 4)
+            painter.drawRoundedRect(4, 4, 45, 22, 6, 6)
 
             # Badge text
             painter.setPen(QColor(255, 255, 255))

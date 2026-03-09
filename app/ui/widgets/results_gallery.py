@@ -25,11 +25,11 @@ class ResultsGallery(QWidget):
 
         # Header
         self.header_label = QLabel("")
-        self.header_label.setStyleSheet("font-size: 14px; font-weight: bold;")
+        self.header_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #1D1D1F;")
         layout.addWidget(self.header_label)
 
         self.detail_label = QLabel("")
-        self.detail_label.setStyleSheet("color: #666;")
+        self.detail_label.setStyleSheet("color: #86868B;")
         layout.addWidget(self.detail_label)
 
         # Open folder button
@@ -203,7 +203,7 @@ class SpinnerWidget(QWidget):
         arc_size = 48
         pen = painter.pen()
         pen.setWidth(4)
-        pen.setColor(QColor("#FF9800"))
+        pen.setColor(QColor("#F5811F"))
         pen.setCapStyle(Qt.RoundCap)
         painter.setPen(pen)
         from PySide6.QtCore import QRectF
@@ -211,7 +211,7 @@ class SpinnerWidget(QWidget):
         painter.drawArc(arc_rect, self._angle * 16, 270 * 16)
 
         # Message text
-        painter.setPen(QColor("#333"))
+        painter.setPen(QColor("#1D1D1F"))
         font = QFont()
         font.setPointSize(14)
         painter.setFont(font)

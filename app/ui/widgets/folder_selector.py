@@ -35,12 +35,12 @@ class FolderSelector(QWidget):
 
         # Title
         title = QLabel("ตั้งค่าโฟลเดอร์")
-        title.setStyleSheet("font-size: 20px; font-weight: bold;")
+        title.setStyleSheet("font-size: 20px; font-weight: bold; color: #1D1D1F;")
         layout.addWidget(title)
 
         desc = QLabel("เลือกโฟลเดอร์หลักที่เก็บรูปภาพ โฟลเดอร์ย่อยจะถูกใช้เป็นกิจกรรม")
         desc.setWordWrap(True)
-        desc.setStyleSheet("color: #666; margin-bottom: 10px;")
+        desc.setStyleSheet("color: #86868B; margin-bottom: 10px;")
         layout.addWidget(desc)
 
         # Folder picker
@@ -80,7 +80,7 @@ class FolderSelector(QWidget):
 
         # Summary
         self.summary_label = QLabel("")
-        self.summary_label.setStyleSheet("color: #666; font-style: italic;")
+        self.summary_label.setStyleSheet("color: #86868B; font-style: italic;")
         subfolder_layout.addWidget(self.summary_label)
 
         layout.addWidget(subfolder_group)

@@ -30,7 +30,7 @@ class SearchPanel(QWidget):
         layout.setSpacing(10)
 
         title = QLabel("ค้นหาและจัดเรียง")
-        title.setStyleSheet("font-size: 20px; font-weight: bold;")
+        title.setStyleSheet("font-size: 20px; font-weight: bold; color: #1D1D1F;")
         layout.addWidget(title)
 
         # Controls
@@ -92,12 +92,12 @@ class SearchPanel(QWidget):
         self.search_btn = QPushButton("ค้นหาและจัดเรียง")
         self.search_btn.setStyleSheet("""
             QPushButton {
-                background: #FF9800; color: white;
-                padding: 10px 24px; border-radius: 4px;
-                font-weight: bold; font-size: 14px;
+                background: #F5811F; color: white;
+                padding: 10px 24px; border-radius: 8px;
+                font-weight: bold; font-size: 14px; border: none;
             }
-            QPushButton:hover { background: #F57C00; }
-            QPushButton:disabled { background: #bbb; }
+            QPushButton:hover { background: #E0710A; }
+            QPushButton:disabled { background: #C7C7CC; }
         """)
         self.search_btn.clicked.connect(self._start_search)
         btn_layout.addWidget(self.search_btn)
