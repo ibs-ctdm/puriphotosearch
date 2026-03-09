@@ -1,5 +1,7 @@
 """Photo grid results display with similarity scores."""
 
+import os
+import sys
 import subprocess
 
 from PySide6.QtCore import Qt, QTimer, Property
@@ -156,11 +158,21 @@ class ResultsGallery(QWidget):
 
     def _on_photo_clicked(self, file_path: str):
         """Open photo in default viewer."""
-        subprocess.run(["open", file_path], check=False)
+        if sys.platform == "darwin":
+            subprocess.run(["open", file_path], check=False)
+        elif sys.platform == "win32":
+            os.startfile(file_path)
+        else:
+            subprocess.run(["xdg-open", file_path], check=False)
 
     def _open_folder(self):
         if self._output_folder:
-            subprocess.run(["open", self._output_folder], check=False)
+            if sys.platform == "darwin":
+                subprocess.run(["open", self._output_folder], check=False)
+            elif sys.platform == "win32":
+                os.startfile(self._output_folder)
+            else:
+                subprocess.run(["xdg-open", self._output_folder], check=False)
 
 
 class SpinnerWidget(QWidget):

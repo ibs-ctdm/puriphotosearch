@@ -2,20 +2,29 @@
 
 import json
 import os
+import sys
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 
 APP_NAME = "PuriPhotoSearch"
 APP_VERSION = "1.0.0"
 
-# macOS standard paths
-APP_SUPPORT_DIR = os.path.join(
-    os.path.expanduser("~"), "Library", "Application Support", APP_NAME
-)
+# Platform-aware data paths
+if sys.platform == "darwin":
+    APP_SUPPORT_DIR = os.path.join(
+        os.path.expanduser("~"), "Library", "Application Support", APP_NAME
+    )
+    LOG_DIR = os.path.join(os.path.expanduser("~"), "Library", "Logs")
+elif sys.platform == "win32":
+    APP_SUPPORT_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), APP_NAME)
+    LOG_DIR = os.path.join(APP_SUPPORT_DIR, "logs")
+else:
+    APP_SUPPORT_DIR = os.path.join(os.path.expanduser("~"), f".{APP_NAME.lower()}")
+    LOG_DIR = os.path.join(APP_SUPPORT_DIR, "logs")
+
 DB_PATH = os.path.join(APP_SUPPORT_DIR, "photosearch.db")
 CONFIG_PATH = os.path.join(APP_SUPPORT_DIR, "settings.json")
 MODEL_CACHE_DIR = os.path.join(APP_SUPPORT_DIR, "models")
-LOG_DIR = os.path.join(os.path.expanduser("~"), "Library", "Logs")
 
 
 @dataclass
