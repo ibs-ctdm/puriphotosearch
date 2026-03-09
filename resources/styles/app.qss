@@ -1,0 +1,224 @@
+/* PhotoSearch macOS App Stylesheet */
+
+/* Global defaults - ensure dark text on light backgrounds */
+QWidget {
+    color: #333;
+}
+
+QMainWindow {
+    background: #ffffff;
+    color: #333;
+}
+
+QLabel {
+    color: #333;
+}
+
+QGroupBox {
+    font-weight: bold;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin-top: 12px;
+    padding-top: 16px;
+    color: #333;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 2px 8px;
+    color: #333;
+}
+
+QPushButton {
+    padding: 6px 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fafafa;
+    color: #333;
+}
+
+QPushButton:hover {
+    background: #e8e8e8;
+    border-color: #bbb;
+}
+
+QPushButton:pressed {
+    background: #ddd;
+}
+
+QPushButton:disabled {
+    color: #aaa;
+    background: #f5f5f5;
+    border-color: #ddd;
+}
+
+QLineEdit {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+    color: #333;
+}
+
+QLineEdit:focus {
+    border-color: #2196F3;
+}
+
+QComboBox {
+    padding: 6px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+    color: #333;
+}
+
+QComboBox:focus {
+    border-color: #2196F3;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 24px;
+}
+
+QComboBox QAbstractItemView {
+    background: white;
+    color: #333;
+    selection-background-color: #e3f2fd;
+    selection-color: #1976D2;
+}
+
+QRadioButton {
+    color: #333;
+    spacing: 6px;
+}
+
+QCheckBox {
+    color: #333;
+    spacing: 6px;
+}
+
+QTableWidget {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    gridline-color: #eee;
+    color: #333;
+    background: white;
+}
+
+QTableWidget::item {
+    padding: 4px 8px;
+    color: #333;
+}
+
+QHeaderView::section {
+    background: #f5f5f5;
+    padding: 6px 8px;
+    border: none;
+    border-bottom: 1px solid #ddd;
+    border-right: 1px solid #eee;
+    font-weight: bold;
+    color: #333;
+}
+
+QProgressBar {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+    height: 22px;
+    color: #333;
+    background: #f5f5f5;
+}
+
+QProgressBar::chunk {
+    background: #4CAF50;
+    border-radius: 3px;
+}
+
+QScrollArea {
+    border: none;
+    background: #eef3f8;
+}
+
+QScrollArea > QWidget > QWidget {
+    background: #eef3f8;
+}
+
+QStatusBar {
+    background: #f5f5f5;
+    border-top: 1px solid #ddd;
+    color: #333;
+}
+
+QStatusBar QLabel {
+    color: #666;
+}
+
+QSlider::groove:horizontal {
+    height: 6px;
+    background: #ddd;
+    border-radius: 3px;
+}
+
+QSlider::handle:horizontal {
+    width: 16px;
+    height: 16px;
+    margin: -5px 0;
+    border-radius: 8px;
+    background: #2196F3;
+}
+
+QSlider::sub-page:horizontal {
+    background: #2196F3;
+    border-radius: 3px;
+}
+
+QListWidget {
+    color: #333;
+    background: white;
+}
+
+QListWidget::item {
+    color: #333;
+}
+
+QDialog {
+    background: #ffffff;
+    color: #333;
+}
+
+QSpinBox, QDoubleSpinBox {
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+    color: #333;
+}
+
+QMenuBar {
+    background: #f5f5f5;
+    color: #333;
+}
+
+QMenuBar::item:selected {
+    background: #e3f2fd;
+}
+
+QMenu {
+    background: white;
+    color: #333;
+    border: 1px solid #ddd;
+}
+
+QMenu::item:selected {
+    background: #e3f2fd;
+    color: #1976D2;
+}
+
+QToolTip {
+    background: #333;
+    color: white;
+    border: 1px solid #555;
+    padding: 4px;
+}
