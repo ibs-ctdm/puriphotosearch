@@ -4,7 +4,8 @@ __pycache__/
 *.egg-info/
 dist/
 build/
-*.spec
+# PyInstaller spec files (keep our custom ones)
+# *.spec
 
 # Virtual environment
 venv/
@@ -24,8 +25,7 @@ models/
 # App data
 *.db
 
-# Build artifacts
-resources/icon.icns
+# Build artifacts (keep icon.icns for macOS bundle)
 
 # Sample/test data
 sample-photosearch/
