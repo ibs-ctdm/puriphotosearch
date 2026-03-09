@@ -2,7 +2,8 @@
 
 import subprocess
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer, Property
+from PySide6.QtGui import QPainter, QColor, QFont
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QScrollArea, QGridLayout,
@@ -41,19 +42,41 @@ class ResultsGallery(QWidget):
         layout.addLayout(btn_layout)
 
         # Scroll area for photo grid
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         self.grid_container = QWidget()
         self.grid_layout = QGridLayout(self.grid_container)
         self.grid_layout.setSpacing(8)
         self.grid_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
 
-        scroll.setWidget(self.grid_container)
-        layout.addWidget(scroll)
+        self.scroll.setWidget(self.grid_container)
+        layout.addWidget(self.scroll)
+
+        # Loading overlay (hidden by default)
+        self._loading_widget = SpinnerWidget(self.scroll)
+        self._loading_widget.setVisible(False)
 
         self._output_folder = None
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self._loading_widget.isVisible():
+            self._loading_widget.setGeometry(self.scroll.geometry())
+
+    def show_loading(self, message="กำลังประมวลผล..."):
+        """Show loading spinner overlay on the results area."""
+        self._loading_widget.set_message(message)
+        self._loading_widget.setGeometry(self.scroll.geometry())
+        self._loading_widget.setVisible(True)
+        self._loading_widget.raise_()
+        self._loading_widget.start()
+
+    def hide_loading(self):
+        """Hide loading spinner overlay."""
+        self._loading_widget.stop()
+        self._loading_widget.setVisible(False)
 
     def clear(self):
         """Clear all results."""
@@ -138,3 +161,60 @@ class ResultsGallery(QWidget):
     def _open_folder(self):
         if self._output_folder:
             subprocess.run(["open", self._output_folder], check=False)
+
+
+class SpinnerWidget(QWidget):
+    """Overlay widget with a spinning arc and status message."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._angle = 0
+        self._message = "กำลังประมวลผล..."
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._rotate)
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+
+    def set_message(self, message: str):
+        self._message = message
+        self.update()
+
+    def start(self):
+        self._angle = 0
+        self._timer.start(30)
+
+    def stop(self):
+        self._timer.stop()
+
+    def _rotate(self):
+        self._angle = (self._angle + 8) % 360
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        # Semi-transparent background
+        painter.fillRect(self.rect(), QColor(255, 255, 255, 200))
+
+        cx = self.width() / 2
+        cy = self.height() / 2 - 20
+
+        # Spinning arc
+        arc_size = 48
+        pen = painter.pen()
+        pen.setWidth(4)
+        pen.setColor(QColor("#FF9800"))
+        pen.setCapStyle(Qt.RoundCap)
+        painter.setPen(pen)
+        from PySide6.QtCore import QRectF
+        arc_rect = QRectF(cx - arc_size / 2, cy - arc_size / 2, arc_size, arc_size)
+        painter.drawArc(arc_rect, self._angle * 16, 270 * 16)
+
+        # Message text
+        painter.setPen(QColor("#333"))
+        font = QFont()
+        font.setPointSize(14)
+        painter.setFont(font)
+        from PySide6.QtCore import QRect
+        text_rect = QRect(0, int(cy + arc_size / 2 + 12), self.width(), 40)
+        painter.drawText(text_rect, Qt.AlignHCenter | Qt.AlignTop, self._message)

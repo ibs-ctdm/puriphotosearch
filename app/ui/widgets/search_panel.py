@@ -149,6 +149,7 @@ class SearchPanel(QWidget):
         threshold = self.threshold_slider.value() / 100.0
 
         self.results_gallery.clear()
+        self.results_gallery.show_loading("กำลังค้นหา...")
         self.search_btn.setEnabled(False)
 
         if self.single_radio.isChecked():
@@ -187,10 +188,11 @@ class SearchPanel(QWidget):
         self._worker.start()
 
     def _on_status(self, message):
-        self.results_gallery.header_label.setText(message)
+        self.results_gallery._loading_widget.set_message(message)
 
     def _on_single_result(self, result):
         self.search_btn.setEnabled(True)
+        self.results_gallery.hide_loading()
         self.results_gallery.show_single_person_results(
             person_name=result["person_name"],
             matches=result["matches"],
@@ -199,6 +201,7 @@ class SearchPanel(QWidget):
 
     def _on_all_result(self, result):
         self.search_btn.setEnabled(True)
+        self.results_gallery.hide_loading()
         self.results_gallery.show_all_persons_results(
             search_results=result.get("search_results", {}),
             organized=result.get("organized"),
@@ -206,4 +209,5 @@ class SearchPanel(QWidget):
 
     def _on_error(self, message):
         self.search_btn.setEnabled(True)
+        self.results_gallery.hide_loading()
         QMessageBox.warning(self, "ข้อผิดพลาดในการค้นหา", message)

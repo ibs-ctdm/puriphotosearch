@@ -21,7 +21,7 @@ class PersonCard(QWidget):
         self.person_id = person_id
         self.person_name = name
 
-        self.setFixedSize(160, 230)
+        self.setFixedSize(160, 240)
         self.setStyleSheet("""
             PersonCard {
                 border: 1px solid #ddd;
@@ -52,7 +52,7 @@ class PersonCard(QWidget):
         # Name
         self.name_label = QLabel(name)
         self.name_label.setAlignment(Qt.AlignCenter)
-        self.name_label.setStyleSheet("font-weight: bold; font-size: 12px;")
+        self.name_label.setStyleSheet("font-weight: bold; font-size: 12px; margin-top: 4px;")
         self.name_label.setWordWrap(True)
         layout.addWidget(self.name_label)
 

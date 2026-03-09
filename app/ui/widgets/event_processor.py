@@ -120,7 +120,7 @@ class EventProcessor(QWidget):
 
             if db_info and db_info["is_processed"]:
                 self.table.setItem(i, 2, QTableWidgetItem(str(db_info["face_count"])))
-                status_item = QTableWidgetItem("เสร็จแล้ว")
+                status_item = QTableWidgetItem("\u2705 เสร็จแล้ว")
                 status_item.setForeground(Qt.darkGreen)
             else:
                 self.table.setItem(i, 2, QTableWidgetItem("-"))
