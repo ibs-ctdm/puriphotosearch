@@ -8,7 +8,7 @@ from PySide6.QtGui import QAction, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QLabel,
     QListWidget, QListWidgetItem, QStackedWidget,
-    QStatusBar, QMenuBar, QMessageBox, QFrame,
+    QStatusBar, QMenuBar, QMessageBox, QFrame, QPushButton,
 )
 
 from app.config import AppConfig, APP_NAME, APP_VERSION
@@ -179,10 +179,11 @@ class MainWindow(QMainWindow):
         self.process_panel = EventProcessor()
         self.search_panel = SearchPanel(self.config)
 
-        self.stack.addWidget(self.folder_panel)
-        self.stack.addWidget(self.person_panel)
-        self.stack.addWidget(self.process_panel)
-        self.stack.addWidget(self.search_panel)
+        # Wrap first 3 panels with "Next" button
+        panels = [self.folder_panel, self.person_panel, self.process_panel]
+        for i, panel in enumerate(panels):
+            self.stack.addWidget(self._wrap_with_next(panel, i))
+        self.stack.addWidget(self.search_panel)  # Last page: no next button
 
         # Connect signals
         self.folder_panel.folder_changed.connect(self._on_folder_changed)
@@ -230,6 +231,37 @@ class MainWindow(QMainWindow):
         self.model_label.setText("โมเดล: เกิดข้อผิดพลาด")
         self.model_label.setStyleSheet("color: #FF3B30;")
         QMessageBox.critical(self, "ข้อผิดพลาดโมเดล", message)
+
+    def _wrap_with_next(self, panel: QWidget, panel_index: int) -> QWidget:
+        """Wrap a panel widget with a 'Next' button at the bottom-right."""
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(panel, 1)
+
+        btn_layout = QHBoxLayout()
+        btn_layout.setContentsMargins(0, 0, 16, 12)
+        btn_layout.addStretch()
+        next_btn = QPushButton("ถัดไป →")
+        next_btn.setStyleSheet("""
+            QPushButton {
+                background: #F5811F; color: white;
+                padding: 10px 28px; border-radius: 8px;
+                font-size: 14px; font-weight: bold; border: none;
+            }
+            QPushButton:hover { background: #E0710A; }
+        """)
+        next_btn.clicked.connect(lambda: self._go_next(panel_index))
+        btn_layout.addWidget(next_btn)
+        layout.addLayout(btn_layout)
+        return container
+
+    def _go_next(self, current_index: int):
+        """Navigate to the next sidebar item."""
+        next_index = current_index + 1
+        if next_index < self.sidebar.count():
+            self.sidebar.setCurrentRow(next_index)
 
     def _on_panel_changed(self, index):
         self.stack.setCurrentIndex(index)

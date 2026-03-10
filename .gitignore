@@ -25,6 +25,11 @@ models/
 # App data
 *.db
 
+# Certificates & secrets
+*.cer
+*.p12
+*.certSigningRequest
+
 # Build artifacts (keep icon.icns for macOS bundle)
 
 # Sample/test data
