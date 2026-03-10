@@ -2,6 +2,7 @@
 
 import logging
 import os
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -48,24 +49,25 @@ def _make_face_thumbnail(image_path: str, bbox, size: int = 150) -> bytes:
 
 
 class ScanClusterWorker(BaseWorker):
-    """Scan all photos in a folder, detect faces, and cluster them."""
+    """Scan all photos in selected folders, detect faces, and cluster them."""
 
-    def __init__(self, folder_path: str, threshold: float = 0.45, parent=None):
+    def __init__(self, folder_paths: list, threshold: float = 0.45, parent=None):
         super().__init__(parent)
-        self.folder_path = folder_path
+        self.folder_paths = folder_paths
         self.threshold = threshold
 
     def run(self):
         try:
             self.status_message.emit("กำลังสแกนรูปภาพ...")
 
-            # Collect all images (recursive)
-            folder = Path(self.folder_path)
-            image_paths = sorted(
-                str(f.resolve())
-                for f in folder.rglob("*")
-                if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS
-            )
+            # Collect all images from all selected folders (non-recursive per folder)
+            image_paths = []
+            for folder in self.folder_paths:
+                folder_p = Path(folder)
+                for f in folder_p.iterdir():
+                    if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS:
+                        image_paths.append(str(f.resolve()))
+            image_paths.sort()
 
             if not image_paths:
                 self.error.emit("ไม่พบรูปภาพในโฟลเดอร์ที่เลือก")
@@ -146,46 +148,55 @@ class ScanClusterWorker(BaseWorker):
 
 
 class ExecuteScanWorker(BaseWorker):
-    """Execute: copy photos to person folders + add new persons to DB."""
+    """Execute: merge same-name clusters, copy photos, add new persons to DB."""
 
-    def __init__(
-        self, named_clusters: list, folder_path: str, parent=None,
-    ):
+    def __init__(self, named_clusters: list, parent=None):
         super().__init__(parent)
-        self.named_clusters = named_clusters  # [{name, cluster_data}, ...]
-        self.folder_path = folder_path
+        self.named_clusters = named_clusters  # [{name, cluster}, ...]
 
     def run(self):
         try:
-            total = len(self.named_clusters)
+            # Group clusters by name (merge same-name clusters)
+            grouped = defaultdict(list)
+            for item in self.named_clusters:
+                grouped[item["name"]].append(item["cluster"])
+
+            total = len(grouped)
             persons_added = 0
             photos_copied = 0
 
-            for i, item in enumerate(self.named_clusters):
+            for i, (name, clusters) in enumerate(grouped.items()):
                 if self.is_cancelled():
                     break
-
-                name = item["name"]
-                cluster = item["cluster"]
 
                 self.status_message.emit(
                     f"กำลังดำเนินการ {i + 1}/{total}: {name}..."
                 )
 
-                # 1) Copy photos to person folder
-                photo_paths = list({f["photo_path"] for f in cluster["faces"]})
+                # Merge all faces from clusters with the same name
+                all_faces = []
+                is_known = False
+                person_id = None
+                for cluster in clusters:
+                    all_faces.extend(cluster["faces"])
+                    if cluster["is_known"]:
+                        is_known = True
+                        person_id = cluster.get("person_id")
+
+                # 1) Copy photos to person folders (grouped by parent dir)
+                photo_paths = list({f["photo_path"] for f in all_faces})
                 org_result = FileOrganizer.organize_single_person(
-                    event_folder_path=self.folder_path,
+                    event_folder_path="",
                     person_name=name,
                     matched_photo_paths=photo_paths,
                     is_cancelled=self.is_cancelled,
                 )
                 photos_copied += org_result.get("copied", 0)
 
-                # 2) Add to DB if new person
-                if not cluster["is_known"]:
+                # 2) Add to DB if new person (not already in DB)
+                if not is_known:
                     diverse = select_diverse_embeddings(
-                        cluster["faces"], max_count=5,
+                        all_faces, max_count=5,
                     )
 
                     # Add first as primary

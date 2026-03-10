@@ -20,6 +20,7 @@ from app.ui.widgets.person_card import PersonCard
 from app.ui.widgets.progress_dialog import ProgressDialog
 from app.ui.widgets.photo_browser_dialog import PhotoBrowserDialog
 from app.ui.widgets.face_crop_dialog import FaceCropDialog
+from app.ui.widgets.scan_mode_dialog import ScanModeDialog
 
 
 class PersonManager(QWidget):
@@ -48,6 +49,18 @@ class PersonManager(QWidget):
         self.count_label.setStyleSheet("color: #86868B; font-size: 14px;")
         header_layout.addWidget(self.count_label)
         header_layout.addStretch()
+
+        self.scan_btn = QPushButton("โหมดสแกนและตั้งชื่อ")
+        self.scan_btn.setStyleSheet("""
+            QPushButton {
+                background: #5BA4CF; color: white;
+                padding: 8px 18px; border-radius: 8px;
+                font-weight: bold; font-size: 13px; border: none;
+            }
+            QPushButton:hover { background: #4A8CB5; }
+        """)
+        self.scan_btn.clicked.connect(self._open_scan_mode)
+        header_layout.addWidget(self.scan_btn)
 
         self.add_btn = QPushButton("+ เพิ่มบุคคล")
         self.add_btn.setStyleSheet("""
@@ -106,25 +119,30 @@ class PersonManager(QWidget):
             card.manage_photos_clicked.connect(self._manage_photos)
             self.grid_layout.addWidget(card, i // cols, i % cols)
 
-    def _browse_and_crop(self) -> str | None:
-        """Open photo browser then face crop dialog. Returns cropped image path or None."""
+    def _browse_and_crop(self) -> tuple:
+        """Open photo browser then face crop dialog.
+
+        Returns (cropped_path, embedding) or (None, None).
+        """
         config = AppConfig.load()
         root = config.main_photos_folder or os.path.expanduser("~")
 
         browser = PhotoBrowserDialog(root, self)
         if browser.exec() != QDialog.Accepted:
-            return None
+            return None, None
         photo_path = browser.get_selected_path()
         if not photo_path:
-            return None
+            return None, None
 
         crop_dialog = FaceCropDialog(photo_path, self)
         if crop_dialog.exec() != QDialog.Accepted:
-            return None
-        return crop_dialog.get_cropped_path() or photo_path
+            return None, None
+        cropped = crop_dialog.get_cropped_path() or photo_path
+        embedding = crop_dialog.get_selected_embedding()
+        return cropped, embedding
 
     def _add_person(self):
-        file_path = self._browse_and_crop()
+        file_path, embedding = self._browse_and_crop()
         if not file_path:
             return
 
@@ -141,7 +159,7 @@ class PersonManager(QWidget):
         self._progress = ProgressDialog("กำลังเพิ่มบุคคล", self)
         self._progress.set_status(f"กำลังประมวลผลใบหน้าของ {name}...")
 
-        self._worker = AddPersonWorker(name, file_path)
+        self._worker = AddPersonWorker(name, file_path, embedding=embedding)
         self._worker.status_message.connect(self._progress.set_status)
         self._worker.finished_with_result.connect(self._on_person_added)
         self._worker.error.connect(self._on_add_error)
@@ -163,6 +181,15 @@ class PersonManager(QWidget):
         if hasattr(self, '_progress'):
             self._progress.close()
         QMessageBox.warning(self, "ข้อผิดพลาด", message)
+
+    def _open_scan_mode(self):
+        dialog = ScanModeDialog(self)
+        dialog.person_changed.connect(self._on_scan_persons_added)
+        dialog.exec()
+
+    def _on_scan_persons_added(self):
+        self.refresh_persons()
+        self.person_changed.emit()
 
     def _edit_person(self, person_id: int, current_name: str):
         new_name, ok = QInputDialog.getText(
@@ -187,14 +214,14 @@ class PersonManager(QWidget):
             self.person_changed.emit()
 
     def _add_photo_to_person(self, person_id: int, name: str):
-        file_path = self._browse_and_crop()
+        file_path, embedding = self._browse_and_crop()
         if not file_path:
             return
 
         self._progress = ProgressDialog("กำลังเพิ่มรูปอ้างอิง", self)
         self._progress.set_status(f"กำลังประมวลผลใบหน้าเพิ่มเติมสำหรับ {name}...")
 
-        self._worker = AddEmbeddingWorker(person_id, name, file_path)
+        self._worker = AddEmbeddingWorker(person_id, name, file_path, embedding=embedding)
         self._worker.status_message.connect(self._progress.set_status)
         self._worker.finished_with_result.connect(self._on_embedding_added)
         self._worker.error.connect(self._on_add_error)

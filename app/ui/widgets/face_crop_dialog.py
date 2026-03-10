@@ -119,9 +119,11 @@ class FaceCropDialog(QDialog):
     def __init__(self, photo_path: str, parent=None):
         super().__init__(parent)
         self._photo_path = photo_path
-        self._faces = []
+        self._detection_results = []  # full results with embeddings
+        self._faces = []  # bbox list only
         self._cv_image = None
         self._cropped_path = None
+        self._selected_embedding = None
 
         self.setWindowTitle("เลือกใบหน้า")
         self.resize(850, 600)
@@ -143,10 +145,11 @@ class FaceCropDialog(QDialog):
 
     def _detect_faces(self):
         try:
-            results = face_service.detect_faces(self._photo_path)
-            self._faces = [r["bbox"] for r in results]
+            self._detection_results = face_service.detect_faces(self._photo_path)
+            self._faces = [r["bbox"] for r in self._detection_results]
         except Exception as e:
             logger.warning(f"Face detection failed: {e}")
+            self._detection_results = []
             self._faces = []
 
     # ── UI ────────────────────────────────────────────────────────
@@ -243,6 +246,9 @@ class FaceCropDialog(QDialog):
     def _on_face_selected(self, idx: int):
         self._face_widget.select_face(idx)
         bbox = self._faces[idx]
+        # Store the embedding for the selected face
+        if idx < len(self._detection_results):
+            self._selected_embedding = self._detection_results[idx].get("embedding")
         cropped = self._crop_face(bbox)
         if cropped is not None:
             self._show_preview(cropped)
@@ -340,3 +346,7 @@ class FaceCropDialog(QDialog):
     def get_cropped_path(self) -> str | None:
         """Return the path to the cropped face image, or None."""
         return self._cropped_path
+
+    def get_selected_embedding(self):
+        """Return the embedding of the selected face, or None."""
+        return self._selected_embedding

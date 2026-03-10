@@ -30,16 +30,20 @@ class AddPersonWorker(BaseWorker):
 
     person_added = Signal(int, str)  # (person_id, person_name)
 
-    def __init__(self, name: str, photo_path: str, parent=None):
+    def __init__(self, name: str, photo_path: str, embedding=None, parent=None):
         super().__init__(parent)
         self.name = name
         self.photo_path = photo_path
+        self.embedding = embedding  # optional pre-computed embedding
 
     def run(self):
         try:
             self.status_message.emit("กำลังตรวจจับใบหน้า...")
 
-            embedding = face_service.get_best_embedding(self.photo_path)
+            if self.embedding is not None:
+                embedding = self.embedding
+            else:
+                embedding = face_service.get_best_embedding(self.photo_path)
             thumbnail = _make_thumbnail(self.photo_path)
 
             person_id = add_person(
@@ -64,11 +68,12 @@ class AddPersonWorker(BaseWorker):
 class AddEmbeddingWorker(BaseWorker):
     """Extract embedding from an additional photo and add to existing person."""
 
-    def __init__(self, person_id: int, person_name: str, photo_path: str, parent=None):
+    def __init__(self, person_id: int, person_name: str, photo_path: str, embedding=None, parent=None):
         super().__init__(parent)
         self.person_id = person_id
         self.person_name = person_name
         self.photo_path = photo_path
+        self.embedding = embedding  # optional pre-computed embedding
 
     def run(self):
         try:
@@ -76,7 +81,10 @@ class AddEmbeddingWorker(BaseWorker):
                 f"กำลังตรวจจับใบหน้าเพิ่มเติมสำหรับ {self.person_name}..."
             )
 
-            embedding = face_service.get_best_embedding(self.photo_path)
+            if self.embedding is not None:
+                embedding = self.embedding
+            else:
+                embedding = face_service.get_best_embedding(self.photo_path)
             thumbnail = _make_thumbnail(self.photo_path)
 
             emb_id = add_person_embedding(
