@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QGridLayout, QGroupBox, QDialog, QRadioButton, QButtonGroup,
 )
 
+from app.config import AppConfig
 from app.database import (
     get_all_persons, delete_person, update_person_name,
     get_person_embeddings, delete_person_embedding, set_primary_embedding,
@@ -17,6 +18,8 @@ from app.database import (
 from app.workers.person_worker import AddPersonWorker, AddEmbeddingWorker
 from app.ui.widgets.person_card import PersonCard
 from app.ui.widgets.progress_dialog import ProgressDialog
+from app.ui.widgets.photo_browser_dialog import PhotoBrowserDialog
+from app.ui.widgets.face_crop_dialog import FaceCropDialog
 
 
 class PersonManager(QWidget):
@@ -103,12 +106,25 @@ class PersonManager(QWidget):
             card.manage_photos_clicked.connect(self._manage_photos)
             self.grid_layout.addWidget(card, i // cols, i % cols)
 
+    def _browse_and_crop(self) -> str | None:
+        """Open photo browser then face crop dialog. Returns cropped image path or None."""
+        config = AppConfig.load()
+        root = config.main_photos_folder or os.path.expanduser("~")
+
+        browser = PhotoBrowserDialog(root, self)
+        if browser.exec() != QDialog.Accepted:
+            return None
+        photo_path = browser.get_selected_path()
+        if not photo_path:
+            return None
+
+        crop_dialog = FaceCropDialog(photo_path, self)
+        if crop_dialog.exec() != QDialog.Accepted:
+            return None
+        return crop_dialog.get_cropped_path() or photo_path
+
     def _add_person(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "เลือกรูปใบหน้าของบุคคล",
-            os.path.expanduser("~"),
-            "รูปภาพ (*.jpg *.jpeg *.png *.webp *.bmp)",
-        )
+        file_path = self._browse_and_crop()
         if not file_path:
             return
 
@@ -171,11 +187,7 @@ class PersonManager(QWidget):
             self.person_changed.emit()
 
     def _add_photo_to_person(self, person_id: int, name: str):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, f"เลือกรูปเพิ่มเติมสำหรับ {name}",
-            os.path.expanduser("~"),
-            "รูปภาพ (*.jpg *.jpeg *.png *.webp *.bmp)",
-        )
+        file_path = self._browse_and_crop()
         if not file_path:
             return
 
