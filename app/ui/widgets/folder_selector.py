@@ -6,7 +6,7 @@ from pathlib import Path
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QLineEdit, QFileDialog, QListWidget, QListWidgetItem,
+    QLineEdit, QFileDialog, QTreeWidget, QTreeWidgetItem,
     QGroupBox,
 )
 
@@ -22,6 +22,7 @@ class FolderSelector(QWidget):
     def __init__(self, config, parent=None):
         super().__init__(parent)
         self.config = config
+        self._updating_checks = False
         self._setup_ui()
 
         if self.config.main_photos_folder and os.path.isdir(self.config.main_photos_folder):
@@ -56,13 +57,15 @@ class FolderSelector(QWidget):
         folder_layout.addWidget(self.browse_btn)
         layout.addWidget(folder_group)
 
-        # Subfolder list
+        # Subfolder tree
         subfolder_group = QGroupBox("โฟลเดอร์ย่อย (กิจกรรม)")
         subfolder_layout = QVBoxLayout(subfolder_group)
 
-        self.subfolder_list = QListWidget()
-        self.subfolder_list.setSelectionMode(QListWidget.NoSelection)
-        subfolder_layout.addWidget(self.subfolder_list)
+        self.subfolder_tree = QTreeWidget()
+        self.subfolder_tree.setHeaderHidden(True)
+        self.subfolder_tree.setSelectionMode(QTreeWidget.NoSelection)
+        self.subfolder_tree.itemChanged.connect(self._on_item_changed)
+        subfolder_layout.addWidget(self.subfolder_tree)
 
         # Buttons
         btn_layout = QHBoxLayout()
@@ -99,52 +102,114 @@ class FolderSelector(QWidget):
             self._scan_subfolders()
 
     def _scan_subfolders(self):
-        self.subfolder_list.clear()
+        self.subfolder_tree.clear()
         folder = self.folder_input.text()
         if not folder or not os.path.isdir(folder):
             return
 
-        subfolders = []
+        self._updating_checks = True
+        folder_count = 0
         for entry in sorted(Path(folder).iterdir()):
             if entry.is_dir() and not entry.name.startswith('.'):
-                photo_count = sum(
-                    1 for f in entry.rglob("*")
-                    if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS
-                )
-                subfolders.append((str(entry), entry.name, photo_count))
+                item = self._build_tree_item(entry)
+                if item is not None:
+                    self.subfolder_tree.addTopLevelItem(item)
+                    folder_count += self._count_tree_items(item)
 
-        for path, name, count in subfolders:
-            item = QListWidgetItem()
-            item.setText(f"{name}    ({count} รูป)")
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(Qt.Checked)
-            item.setData(Qt.UserRole, path)
-            self.subfolder_list.addItem(item)
+        self.subfolder_tree.expandAll()
+        self._updating_checks = False
 
-        self.summary_label.setText(
-            f"พบ {len(subfolders)} โฟลเดอร์ย่อย"
+        self.summary_label.setText(f"พบ {folder_count} โฟลเดอร์")
+
+    def _build_tree_item(self, dir_path: Path) -> QTreeWidgetItem | None:
+        """Recursively build a tree item for a directory and its subdirectories."""
+        # Count direct photos in this folder
+        photo_count = sum(
+            1 for f in dir_path.iterdir()
+            if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS
         )
 
+        # Recursively build children
+        children = []
+        for entry in sorted(dir_path.iterdir()):
+            if entry.is_dir() and not entry.name.startswith('.'):
+                child = self._build_tree_item(entry)
+                if child is not None:
+                    children.append(child)
+
+        # Skip folders that have no photos and no children with photos
+        if photo_count == 0 and not children:
+            return None
+
+        item = QTreeWidgetItem()
+        item.setText(0, f"{dir_path.name}    ({photo_count} รูป)")
+        item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+        item.setCheckState(0, Qt.Checked)
+        item.setData(0, Qt.UserRole, str(dir_path))
+
+        for child in children:
+            item.addChild(child)
+
+        return item
+
+    def _count_tree_items(self, item: QTreeWidgetItem) -> int:
+        """Count an item and all its descendants."""
+        count = 1
+        for i in range(item.childCount()):
+            count += self._count_tree_items(item.child(i))
+        return count
+
+    def _on_item_changed(self, item: QTreeWidgetItem, column: int):
+        """Cascade checkbox changes to children."""
+        if self._updating_checks:
+            return
+
+        self._updating_checks = True
+        state = item.checkState(0)
+        self._set_children_check_state(item, state)
+        self._updating_checks = False
+
+    def _set_children_check_state(self, item: QTreeWidgetItem, state):
+        """Recursively set check state on all children."""
+        for i in range(item.childCount()):
+            child = item.child(i)
+            child.setCheckState(0, state)
+            self._set_children_check_state(child, state)
+
     def _select_all(self):
-        for i in range(self.subfolder_list.count()):
-            self.subfolder_list.item(i).setCheckState(Qt.Checked)
+        self._updating_checks = True
+        for i in range(self.subfolder_tree.topLevelItemCount()):
+            item = self.subfolder_tree.topLevelItem(i)
+            item.setCheckState(0, Qt.Checked)
+            self._set_children_check_state(item, Qt.Checked)
+        self._updating_checks = False
 
     def _deselect_all(self):
-        for i in range(self.subfolder_list.count()):
-            self.subfolder_list.item(i).setCheckState(Qt.Unchecked)
+        self._updating_checks = True
+        for i in range(self.subfolder_tree.topLevelItemCount()):
+            item = self.subfolder_tree.topLevelItem(i)
+            item.setCheckState(0, Qt.Unchecked)
+            self._set_children_check_state(item, Qt.Unchecked)
+        self._updating_checks = False
 
     def get_selected_folders(self) -> list:
-        """Return list of (path, name, photo_count) for checked subfolders."""
+        """Return list of (path, name, photo_count) for all checked folders."""
         selected = []
-        for i in range(self.subfolder_list.count()):
-            item = self.subfolder_list.item(i)
-            if item.checkState() == Qt.Checked:
-                path = item.data(Qt.UserRole)
-                name = os.path.basename(path)
-                # Re-count photos (recursive)
-                photo_count = sum(
-                    1 for f in Path(path).rglob("*")
-                    if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS
-                )
-                selected.append((path, name, photo_count))
+        for i in range(self.subfolder_tree.topLevelItemCount()):
+            self._collect_checked(self.subfolder_tree.topLevelItem(i), selected)
         return selected
+
+    def _collect_checked(self, item: QTreeWidgetItem, result: list):
+        """Recursively collect all checked items."""
+        if item.checkState(0) == Qt.Checked:
+            path = item.data(0, Qt.UserRole)
+            name = os.path.basename(path)
+            photo_count = sum(
+                1 for f in Path(path).iterdir()
+                if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS
+            )
+            if photo_count > 0:
+                result.append((path, name, photo_count))
+
+        for i in range(item.childCount()):
+            self._collect_checked(item.child(i), result)
