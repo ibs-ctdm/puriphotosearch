@@ -16,6 +16,15 @@ EMBEDDING_DIM = 512
 MAX_IMAGE_DIM = 1280
 
 
+def _imread_safe(path: str) -> Optional[np.ndarray]:
+    """Read image with Unicode path support (Windows compatibility)."""
+    try:
+        data = np.fromfile(path, dtype=np.uint8)
+        return cv2.imdecode(data, cv2.IMREAD_COLOR)
+    except Exception:
+        return None
+
+
 class FaceService:
     """Singleton face recognition service."""
 
@@ -61,7 +70,7 @@ class FaceService:
     @staticmethod
     def _preprocess_image(image_path: str) -> np.ndarray:
         """Read and resize image to MAX_IMAGE_DIM for efficient processing."""
-        img = cv2.imread(str(image_path))
+        img = _imread_safe(str(image_path))
         if img is None:
             raise ValueError(f"Cannot read image: {image_path}")
 

@@ -36,9 +36,69 @@ jobs:
             --clean --noconfirm \
             --distpath dist --workpath build
 
+      - name: Import signing certificate
+        env:
+          APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          # Decode certificate
+          echo "$APPLE_CERTIFICATE_BASE64" | base64 --decode > /tmp/certificate.p12
+
+          # Create temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(uuidgen)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Import certificate
+          security import /tmp/certificate.p12 \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+
+          # Allow codesign to access the keychain
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Add to search list
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+          # Clean up
+          rm /tmp/certificate.p12
+
+      - name: Code sign .app
+        run: |
+          APP_NAME="PuriPhotoSearch"
+          SIGN_IDENTITY="Developer ID Application: Phra Anavach Purivaro (7ZFZ2CSF6M)"
+
+          cat > /tmp/entitlements.plist <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+              <true/>
+              <key>com.apple.security.cs.allow-jit</key>
+              <true/>
+              <key>com.apple.security.cs.disable-library-validation</key>
+              <true/>
+          </dict>
+          </plist>
+          EOF
+
+          codesign --force --deep --options runtime \
+            --sign "$SIGN_IDENTITY" \
+            --entitlements /tmp/entitlements.plist \
+            "dist/${APP_NAME}.app"
+
+          codesign --verify --deep --strict "dist/${APP_NAME}.app"
+          echo "Code signing verified."
+
       - name: Create .dmg
         run: |
           APP_NAME="PuriPhotoSearch"
+          SIGN_IDENTITY="Developer ID Application: Phra Anavach Purivaro (7ZFZ2CSF6M)"
           DMG_NAME="${APP_NAME}-${{ github.ref_name }}-macOS.dmg"
           mkdir -p dist/dmg_staging
           cp -R dist/${APP_NAME}.app dist/dmg_staging/
@@ -49,6 +109,34 @@ jobs:
             -ov -format UDBZ \
             "dist/${DMG_NAME}"
           rm -rf dist/dmg_staging
+
+          # Sign the DMG
+          codesign --force --sign "$SIGN_IDENTITY" "dist/${DMG_NAME}"
+
+      - name: Notarize .dmg
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          APP_NAME="PuriPhotoSearch"
+          DMG_NAME="${APP_NAME}-${{ github.ref_name }}-macOS.dmg"
+
+          xcrun notarytool submit "dist/${DMG_NAME}" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --team-id "7ZFZ2CSF6M" \
+            --wait
+
+          xcrun stapler staple "dist/${DMG_NAME}"
+          echo "Notarization complete and stapled."
+
+      - name: Clean up keychain
+        if: always()
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH"
+          fi
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4

@@ -103,7 +103,8 @@ class PhotoProcessor:
 
                     # Get image dimensions
                     try:
-                        img = cv2.imread(image_path)
+                        raw = np.fromfile(image_path, dtype=np.uint8)
+                        img = cv2.imdecode(raw, cv2.IMREAD_COLOR)
                         h, w = img.shape[:2] if img is not None else (0, 0)
                     except Exception:
                         h, w = 0, 0
