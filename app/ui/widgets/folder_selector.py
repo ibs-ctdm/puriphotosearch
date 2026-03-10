@@ -108,7 +108,7 @@ class FolderSelector(QWidget):
         for entry in sorted(Path(folder).iterdir()):
             if entry.is_dir() and not entry.name.startswith('.'):
                 photo_count = sum(
-                    1 for f in entry.iterdir()
+                    1 for f in entry.rglob("*")
                     if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS
                 )
                 subfolders.append((str(entry), entry.name, photo_count))
@@ -141,9 +141,9 @@ class FolderSelector(QWidget):
             if item.checkState() == Qt.Checked:
                 path = item.data(Qt.UserRole)
                 name = os.path.basename(path)
-                # Re-count photos
+                # Re-count photos (recursive)
                 photo_count = sum(
-                    1 for f in Path(path).iterdir()
+                    1 for f in Path(path).rglob("*")
                     if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS
                 )
                 selected.append((path, name, photo_count))

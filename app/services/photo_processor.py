@@ -24,8 +24,9 @@ class PhotoProcessor:
 
     @staticmethod
     def scan_folder(folder_path: str) -> List[str]:
-        """Find all image files in a folder (non-recursive).
+        """Find all image files in a folder (recursive).
 
+        Walks into all subdirectories to find images at every level.
         Returns sorted list of absolute file paths.
         """
         folder = Path(folder_path)
@@ -33,7 +34,7 @@ class PhotoProcessor:
             raise ValueError(f"Not a directory: {folder_path}")
 
         images = []
-        for f in folder.iterdir():
+        for f in folder.rglob("*"):
             if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS:
                 images.append(str(f.resolve()))
 
