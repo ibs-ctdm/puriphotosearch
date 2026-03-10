@@ -1,26 +1,67 @@
 """SQLite database initialization and CRUD helpers."""
 
+import logging
 import os
 import sqlite3
+import time
 from typing import List, Optional
 
 import numpy as np
 
 from app.config import APP_SUPPORT_DIR, DB_PATH
 
+logger = logging.getLogger(__name__)
 
-def get_connection() -> sqlite3.Connection:
-    """Get a new SQLite connection with WAL mode and foreign keys."""
+
+def get_connection(timeout: float = 30.0) -> sqlite3.Connection:
+    """Get a new SQLite connection with WAL mode and foreign keys.
+
+    Uses a generous timeout to avoid 'database is locked' errors on Windows.
+    """
     os.makedirs(APP_SUPPORT_DIR, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=timeout)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA busy_timeout=30000")
     conn.row_factory = sqlite3.Row
     return conn
 
 
-def init_database() -> None:
-    """Create all tables if they don't exist."""
+def _cleanup_stale_wal() -> None:
+    """Remove stale WAL/SHM files that may linger after a crash on Windows."""
+    for suffix in ("-wal", "-shm"):
+        path = DB_PATH + suffix
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+                logger.info("Removed stale file: %s", path)
+        except OSError:
+            pass
+
+
+def init_database(max_retries: int = 3) -> None:
+    """Create all tables if they don't exist.
+
+    Retries on 'database is locked' to handle stale locks from prior crashes.
+    """
+    for attempt in range(1, max_retries + 1):
+        try:
+            _create_tables()
+            return
+        except sqlite3.OperationalError as exc:
+            if "locked" in str(exc) and attempt < max_retries:
+                logger.warning(
+                    "Database locked on init (attempt %d/%d), retrying in %ds...",
+                    attempt, max_retries, attempt,
+                )
+                _cleanup_stale_wal()
+                time.sleep(attempt)
+            else:
+                raise
+
+
+def _create_tables() -> None:
+    """Internal: create all tables."""
     conn = get_connection()
     try:
         conn.executescript("""
