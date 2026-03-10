@@ -1,8 +1,15 @@
-"""PhotoSearch macOS Desktop App - Entry point."""
+"""PhotoSearch Desktop App - Entry point."""
 
 import sys
 import os
+import io
 import logging
+
+# Fix for PyInstaller --windowed on Windows: stdout/stderr are None
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w")
 
 
 def _get_bundle_dir() -> str:
