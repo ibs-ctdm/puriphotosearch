@@ -67,36 +67,36 @@ class FaceService:
         if not self._is_loaded:
             self.load_model()
 
-    @staticmethod
-    def _preprocess_image(image_path: str) -> np.ndarray:
-        """Read and resize image to MAX_IMAGE_DIM for efficient processing."""
-        img = _imread_safe(str(image_path))
-        if img is None:
-            raise ValueError(f"Cannot read image: {image_path}")
-
-        h, w = img.shape[:2]
-        if max(h, w) > MAX_IMAGE_DIM:
-            scale = MAX_IMAGE_DIM / max(h, w)
-            new_w, new_h = int(w * scale), int(h * scale)
-            img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
-
-        return img
-
     def detect_faces(self, image_path: str) -> List[dict]:
         """Detect all faces in an image.
 
         Returns:
             List of dicts with keys: bbox, embedding (np.ndarray 512-d), confidence
+            bbox coordinates are in original image pixel space [x1, y1, x2, y2].
         """
         self._ensure_loaded()
 
-        img = self._preprocess_image(image_path)
+        img = _imread_safe(str(image_path))
+        if img is None:
+            raise ValueError(f"Cannot read image: {image_path}")
+
+        h, w = img.shape[:2]
+        scale = 1.0
+        if max(h, w) > MAX_IMAGE_DIM:
+            scale = MAX_IMAGE_DIM / max(h, w)
+            new_w, new_h = int(w * scale), int(h * scale)
+            img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
         faces = self._face_app.get(img)
 
         results = []
         for face in faces:
+            bbox = face.bbox.tolist()
+            if scale != 1.0:
+                inv = 1.0 / scale
+                bbox = [v * inv for v in bbox]
             results.append({
-                "bbox": face.bbox.tolist(),
+                "bbox": bbox,
                 "embedding": face.embedding,
                 "confidence": float(face.det_score),
             })
