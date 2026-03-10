@@ -164,7 +164,7 @@ def select_diverse_embeddings(
                 best_face = face
 
         selected.append(best_face)
-        remaining.remove(best_face)
+        remaining = [f for f in remaining if f is not best_face]
 
     return selected
 
