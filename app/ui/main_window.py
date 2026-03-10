@@ -18,6 +18,7 @@ from app.ui.widgets.folder_selector import FolderSelector
 from app.ui.widgets.person_manager import PersonManager
 from app.ui.widgets.event_processor import EventProcessor
 from app.ui.widgets.search_panel import SearchPanel
+from app.ui.widgets.scan_mode_panel import ScanModePanel
 from app.ui.widgets.settings_dialog import SettingsDialog
 
 # Resolve icon path — works both in dev and PyInstaller bundle
@@ -151,6 +152,7 @@ class MainWindow(QMainWindow):
             ("2. ฐานข้อมูลบุคคล", "จัดการรายชื่อบุคคล"),
             ("3. ประมวลผล", "ตรวจจับใบหน้า"),
             ("4. ค้นหา", "ค้นหาและจัดเรียง"),
+            ("5. สแกนและตั้งชื่อ", "สแกนใบหน้าก่อน ตั้งชื่อทีหลัง"),
         ]
         for text, tooltip in items:
             item = QListWidgetItem(text)
@@ -178,17 +180,20 @@ class MainWindow(QMainWindow):
         self.person_panel = PersonManager()
         self.process_panel = EventProcessor()
         self.search_panel = SearchPanel(self.config)
+        self.scan_panel = ScanModePanel()
 
         # Wrap first 3 panels with "Next" button
         panels = [self.folder_panel, self.person_panel, self.process_panel]
         for i, panel in enumerate(panels):
             self.stack.addWidget(self._wrap_with_next(panel, i))
-        self.stack.addWidget(self.search_panel)  # Last page: no next button
+        self.stack.addWidget(self.search_panel)  # Panel 4: no next button
+        self.stack.addWidget(self.scan_panel)     # Panel 5: no next button
 
         # Connect signals
         self.folder_panel.folder_changed.connect(self._on_folder_changed)
         self.person_panel.person_changed.connect(self._on_person_changed)
         self.process_panel.processing_complete.connect(self._on_processing_complete)
+        self.scan_panel.person_changed.connect(self._on_person_changed)
 
         main_layout.addWidget(sidebar_widget)
         main_layout.addWidget(self.stack, 1)

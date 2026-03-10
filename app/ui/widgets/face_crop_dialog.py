@@ -7,11 +7,11 @@ import tempfile
 import cv2
 import numpy as np
 
-from PySide6.QtCore import Qt, QRect, QSize
+from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QPixmap, QImage, QPainter, QPen, QColor, QBrush
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QScrollArea, QWidget, QMessageBox,
+    QWidget, QMessageBox,
 )
 
 from app.services.face_service import face_service
@@ -22,8 +22,10 @@ PREVIEW_SIZE = 200
 FACE_PADDING = 0.35  # 35% padding around detected face bbox
 
 
-class FaceImageWidget(QWidget):
-    """Widget that displays an image with clickable face rectangles."""
+class FaceImageWidget(QLabel):
+    """Label that displays an image with clickable face rectangles drawn on top."""
+
+    face_clicked = None  # will be set as a callback
 
     def __init__(self, pixmap: QPixmap, faces: list, parent=None):
         super().__init__(parent)
@@ -31,29 +33,30 @@ class FaceImageWidget(QWidget):
         self._faces = faces  # list of [x1, y1, x2, y2]
         self._selected_idx = None
         self._scale = 1.0
-        self._fit_to_view()
+        self.face_clicked = None  # callback(index)
+        self.setMouseTracking(True)
         self.setCursor(Qt.PointingHandCursor)
+        self._render()
 
-    def _fit_to_view(self):
-        """Scale pixmap to fit within a reasonable display area."""
+    def _render(self):
+        """Scale pixmap to fit and draw face boxes on it."""
         max_w, max_h = 600, 500
-        pw, ph = self._original_pixmap.width(), self._original_pixmap.height()
+        pw = self._original_pixmap.width()
+        ph = self._original_pixmap.height()
+        if pw == 0 or ph == 0:
+            return
         self._scale = min(max_w / pw, max_h / ph, 1.0)
         disp_w = int(pw * self._scale)
         disp_h = int(ph * self._scale)
-        self.setFixedSize(disp_w, disp_h)
 
-    def paintEvent(self, event):
-        painter = QPainter(self)
+        # Create a display pixmap with boxes drawn on
+        display = self._original_pixmap.scaled(
+            QSize(disp_w, disp_h), Qt.KeepAspectRatio, Qt.SmoothTransformation,
+        )
+
+        painter = QPainter(display)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        # Draw scaled image
-        scaled = self._original_pixmap.scaled(
-            self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation,
-        )
-        painter.drawPixmap(0, 0, scaled)
-
-        # Draw face rectangles
         for i, bbox in enumerate(self._faces):
             x1, y1, x2, y2 = [int(v * self._scale) for v in bbox]
 
@@ -70,34 +73,35 @@ class FaceImageWidget(QWidget):
 
             painter.drawRect(x1, y1, x2 - x1, y2 - y1)
 
-            # Label
+            # Label badge
             label = f"หน้า {i + 1}"
+            label_y = max(y1 - 20, 0)
             painter.setPen(Qt.NoPen)
             bg_color = QColor("#F5811F") if i == self._selected_idx else QColor("#5BA4CF")
             painter.setBrush(QBrush(bg_color))
-            painter.drawRoundedRect(x1, y1 - 20, 50, 18, 4, 4)
+            painter.drawRoundedRect(x1, label_y, 50, 18, 4, 4)
             painter.setPen(QColor("white"))
-            painter.drawText(x1 + 4, y1 - 5, label)
+            painter.drawText(x1 + 4, label_y + 13, label)
 
         painter.end()
+
+        self.setPixmap(display)
+        self.setFixedSize(display.size())
 
     def mousePressEvent(self, event):
         if event.button() != Qt.LeftButton:
             return
 
-        x, y = event.position().x(), event.position().y()
+        pos = event.position()
+        x, y = pos.x(), pos.y()
 
         for i, bbox in enumerate(self._faces):
             x1, y1, x2, y2 = [int(v * self._scale) for v in bbox]
             if x1 <= x <= x2 and y1 <= y <= y2:
                 self._selected_idx = i
-                self.update()
-                # Notify parent
-                parent = self.parentWidget()
-                while parent and not isinstance(parent, FaceCropDialog):
-                    parent = parent.parentWidget()
-                if parent:
-                    parent._on_face_selected(i)
+                self._render()
+                if self.face_clicked:
+                    self.face_clicked(i)
                 return
 
     @property
@@ -106,7 +110,7 @@ class FaceImageWidget(QWidget):
 
     def select_face(self, idx: int):
         self._selected_idx = idx
-        self.update()
+        self._render()
 
 
 class FaceCropDialog(QDialog):
@@ -164,15 +168,18 @@ class FaceCropDialog(QDialog):
         # Main area: image + preview
         main = QHBoxLayout()
 
-        # Left: image with face boxes
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(False)
-        scroll.setAlignment(Qt.AlignCenter)
-
+        # Left: image with face boxes (no scroll area — image is pre-scaled)
         pixmap = QPixmap(self._photo_path)
         self._face_widget = FaceImageWidget(pixmap, self._faces)
-        scroll.setWidget(self._face_widget)
-        main.addWidget(scroll, stretch=3)
+        self._face_widget.face_clicked = self._on_face_selected
+        self._face_widget.setStyleSheet("background: #F5F5F7; border: none;")
+
+        image_container = QWidget()
+        image_container.setStyleSheet("background: #F5F5F7; border-radius: 8px;")
+        img_layout = QVBoxLayout(image_container)
+        img_layout.setAlignment(Qt.AlignCenter)
+        img_layout.addWidget(self._face_widget)
+        main.addWidget(image_container, stretch=3)
 
         # Right: preview panel
         right = QVBoxLayout()

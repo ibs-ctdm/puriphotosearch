@@ -261,6 +261,36 @@ QListWidget::item {
     padding: 4px 8px;
 }
 
+/* ===== Tree Widget ===== */
+QTreeWidget {
+    color: #424245;
+    background: #EBF5FB;
+    border: 1px solid #D2D2D7;
+    border-radius: 8px;
+    outline: none;
+}
+
+QTreeWidget::item {
+    color: #424245;
+    padding: 6px 4px;
+}
+
+QTreeWidget::item:hover {
+    background: #D6EAF8;
+}
+
+QTreeWidget::branch {
+    background: #EBF5FB;
+}
+
+QTreeWidget::branch:has-children:open {
+    image: none;
+}
+
+QTreeWidget::branch:has-children:closed {
+    image: none;
+}
+
 /* ===== Dialogs ===== */
 QDialog {
     background: #ffffff;
