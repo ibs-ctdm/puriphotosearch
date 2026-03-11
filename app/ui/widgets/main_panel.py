@@ -489,13 +489,6 @@ class MainPanel(QWidget):
         browse_btn.setVisible(False)
         row_layout.addWidget(browse_btn)
 
-        def on_mode_changed(id_: int, checked: bool):
-            if not checked:
-                return
-            is_custom = id_ == 1
-            path_input.setVisible(is_custom)
-            browse_btn.setVisible(is_custom)
-
         def on_browse():
             path = QFileDialog.getExistingDirectory(
                 self, "เลือกโฟลเดอร์ปลายทาง",
@@ -504,6 +497,18 @@ class MainPanel(QWidget):
             if path:
                 self._custom_dest_path = path
                 path_input.setText(path)
+                return True
+            return False
+
+        def on_mode_changed(id_: int, checked: bool):
+            if not checked:
+                return
+            is_custom = id_ == 1
+            path_input.setVisible(is_custom)
+            browse_btn.setVisible(is_custom)
+            if is_custom:
+                if not on_browse():
+                    radio_event.setChecked(True)
 
         group.idToggled.connect(on_mode_changed)
         browse_btn.clicked.connect(on_browse)
