@@ -21,6 +21,8 @@ datas = [
     *insightface_datas,
     # App resources
     (os.path.join(PROJECT_DIR, "resources"), "resources"),
+    # Donation QR code
+    (os.path.join(PROJECT_DIR, "promptpay.jpg"), "."),
 ]
 
 # Bundle the pre-downloaded model if it exists
