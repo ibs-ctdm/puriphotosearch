@@ -61,12 +61,14 @@ class SearchSingleWorker(BaseWorker):
 class SearchAllWorker(BaseWorker):
     """Search all persons against an event folder and organize results."""
 
-    def __init__(self, persons, event_folder_id, event_folder_path, threshold, parent=None):
+    def __init__(self, persons, event_folder_id, event_folder_path, threshold,
+                 custom_dest_dir=None, parent=None):
         super().__init__(parent)
         self.persons = persons
         self.event_folder_id = event_folder_id
         self.event_folder_path = event_folder_path
         self.threshold = threshold
+        self.custom_dest_dir = custom_dest_dir
 
     def run(self):
         try:
@@ -90,6 +92,7 @@ class SearchAllWorker(BaseWorker):
             org_result = FileOrganizer.organize_all_persons(
                 event_folder_path=self.event_folder_path,
                 person_matches=person_matches,
+                custom_dest_dir=self.custom_dest_dir,
                 on_progress=lambda name, c, t: self.progress.emit(
                     c, t, f"Copying photos for {name}..."
                 ),

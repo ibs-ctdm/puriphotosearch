@@ -125,6 +125,21 @@ class FolderSelector(QWidget):
         """)
         self._header_checkbox.stateChanged.connect(self._on_header_checkbox_changed)
 
+        # Collapse/Expand toggle button — overlaid on column 0
+        self._all_expanded = True
+        self._collapse_btn = QPushButton("▼", self.subfolder_tree.header())
+        self._collapse_btn.setFixedSize(22, 22)
+        self._collapse_btn.setCursor(Qt.PointingHandCursor)
+        self._collapse_btn.setToolTip("ยุบทั้งหมด")
+        self._collapse_btn.setStyleSheet("""
+            QPushButton {
+                border: none; background: transparent; padding: 0;
+                font-size: 11px; color: #F5811F; font-weight: bold;
+            }
+            QPushButton:hover { background: #FFF3E8; border-radius: 4px; }
+        """)
+        self._collapse_btn.clicked.connect(self._toggle_collapse_all)
+
         # Refresh icon button — overlaid on column 1 header area
         self._refresh_btn = QPushButton(self.subfolder_tree.header())
         self._refresh_btn.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
@@ -363,8 +378,21 @@ class FolderSelector(QWidget):
             child.setCheckState(0, state)
             self._set_children_check_state(child, state)
 
+    def _toggle_collapse_all(self):
+        """Toggle collapse/expand all tree items."""
+        if self._all_expanded:
+            self.subfolder_tree.collapseAll()
+            self._collapse_btn.setText("▶")
+            self._collapse_btn.setToolTip("ขยายทั้งหมด")
+        else:
+            self.subfolder_tree.expandAll()
+            self._collapse_btn.setText("▼")
+            self._collapse_btn.setToolTip("ยุบทั้งหมด")
+        self._all_expanded = not self._all_expanded
+        self._update_folder_icons()
+
     def _position_header_widgets(self):
-        """Position the checkbox, search input, and refresh button on the header."""
+        """Position the checkbox, collapse btn, search input, and refresh button on the header."""
         header = self.subfolder_tree.header()
         h = header.height()
 
@@ -372,6 +400,11 @@ class FolderSelector(QWidget):
         cb_x = header.sectionPosition(0) + 4
         cb_y = (h - self._header_checkbox.height()) // 2
         self._header_checkbox.move(cb_x, cb_y)
+
+        # Collapse/expand toggle — next to checkbox
+        col_x = cb_x + self._header_checkbox.width() + 4
+        col_y = (h - self._collapse_btn.height()) // 2
+        self._collapse_btn.move(col_x, col_y)
 
         # Search input — right portion of column 0, full header height
         sec0_w = header.sectionSize(0)

@@ -7,7 +7,7 @@ from PySide6.QtCore import Signal, Qt, QSize, QRectF
 from PySide6.QtGui import QPixmap, QImage, QIcon, QPainter, QPainterPath, QFont, QColor
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton,
-    QSlider, QCheckBox,
+    QSlider, QCheckBox, QRadioButton, QButtonGroup, QFileDialog,
     QSplitter, QTabWidget, QStackedWidget, QScrollArea,
     QLineEdit, QProgressBar, QMessageBox,
     QTreeWidget, QTreeWidgetItem, QHeaderView, QStyle,
@@ -201,6 +201,10 @@ class MainPanel(QWidget):
         self._updating_person_checks = False
         self._person_tree.itemChanged.connect(self._on_person_tree_item_changed)
         layout.addWidget(self._person_tree, stretch=1)
+
+        # Destination selector
+        self._search_dest_row = self._build_destination_row()
+        layout.addWidget(self._search_dest_row)
 
         # Action button at bottom
         btn_row = QHBoxLayout()
@@ -437,6 +441,94 @@ class MainPanel(QWidget):
         threshold = value / 100.0
         self.threshold_label.setText(f"{threshold:.2f}")
 
+    # ── Destination selector (shared state, separate widgets per tab) ──
+
+    def _build_destination_row(self) -> QWidget:
+        """Build an output destination selector row.
+
+        Each call creates new widgets but they all sync to self._custom_dest_path.
+        """
+        row = QWidget()
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 4, 0, 4)
+        row_layout.setSpacing(6)
+
+        lbl = QLabel("ปลายทาง:")
+        lbl.setStyleSheet("font-size: 12px; color: #636366;")
+        row_layout.addWidget(lbl)
+
+        radio_event = QRadioButton("ในโฟลเดอร์กิจกรรม")
+        radio_event.setChecked(True)
+        radio_event.setStyleSheet("font-size: 12px;")
+        radio_custom = QRadioButton("โฟลเดอร์ที่ระบุ")
+        radio_custom.setStyleSheet("font-size: 12px;")
+
+        group = QButtonGroup(row)
+        group.addButton(radio_event, 0)
+        group.addButton(radio_custom, 1)
+
+        row_layout.addWidget(radio_event)
+        row_layout.addWidget(radio_custom)
+
+        path_input = QLineEdit()
+        path_input.setReadOnly(True)
+        path_input.setPlaceholderText("เลือกโฟลเดอร์...")
+        path_input.setStyleSheet(
+            "padding: 4px 8px; border: 1px solid #D2D2D7;"
+            "border-radius: 4px; font-size: 11px; background: #FAFAFA;"
+        )
+        path_input.setVisible(False)
+        row_layout.addWidget(path_input, stretch=1)
+
+        browse_btn = QPushButton("เรียกดู...")
+        browse_btn.setStyleSheet(
+            "font-size: 12px; padding: 4px 10px;"
+            "border: 1px solid #D2D2D7; border-radius: 4px; background: white;"
+        )
+        browse_btn.setCursor(Qt.PointingHandCursor)
+        browse_btn.setVisible(False)
+        row_layout.addWidget(browse_btn)
+
+        def on_mode_changed(id_: int, checked: bool):
+            if not checked:
+                return
+            is_custom = id_ == 1
+            path_input.setVisible(is_custom)
+            browse_btn.setVisible(is_custom)
+
+        def on_browse():
+            path = QFileDialog.getExistingDirectory(
+                self, "เลือกโฟลเดอร์ปลายทาง",
+                self._custom_dest_path or os.path.expanduser("~"),
+            )
+            if path:
+                self._custom_dest_path = path
+                path_input.setText(path)
+
+        group.idToggled.connect(on_mode_changed)
+        browse_btn.clicked.connect(on_browse)
+
+        # Store references for reading state
+        row._radio_custom = radio_custom
+        if not hasattr(self, "_custom_dest_path"):
+            self._custom_dest_path = ""
+
+        return row
+
+    def _get_custom_dest_dir(self) -> str | None:
+        """Return custom dest dir if any destination row has 'custom' selected."""
+        # Check search tab dest row
+        if (hasattr(self, "_search_dest_row")
+                and self._search_dest_row._radio_custom.isChecked()
+                and self._custom_dest_path):
+            return self._custom_dest_path
+        # Check scan tab dest row
+        if (hasattr(self, "_scan_dest_row")
+                and self._scan_dest_row._radio_custom.isChecked()
+                and self._custom_dest_path):
+            return self._custom_dest_path
+        return None
+
     def _start_search(self):
         """Start search — auto-process unprocessed folders first if needed."""
         selected = self.folder_panel.get_selected_folders()
@@ -523,6 +615,7 @@ class MainPanel(QWidget):
             event_folder_id=ef["id"],
             event_folder_path=ef["folder_path"],
             threshold=self._search_threshold,
+            custom_dest_dir=self._get_custom_dest_dir(),
         )
         self._search_worker.finished_with_result.connect(self._on_all_folder_result)
         self._search_worker.status_message.connect(self._on_search_status)
@@ -773,6 +866,10 @@ class MainPanel(QWidget):
         scroll.setWidget(self._cards_container)
         lay.addWidget(scroll, stretch=1)
 
+        # Destination selector
+        self._scan_dest_row = self._build_destination_row()
+        lay.addWidget(self._scan_dest_row)
+
         # Bottom buttons
         btn_row = QHBoxLayout()
 
@@ -847,8 +944,13 @@ class MainPanel(QWidget):
         self._scan_stack.setCurrentIndex(0)
 
     def _on_scan_progress(self, current: int, total: int, msg: str):
-        pct = int(current / max(total, 1) * 100)
-        self._scan_progress.setValue(pct)
+        if total == 0:
+            # Indeterminate mode (e.g. clustering phase)
+            self._scan_progress.setRange(0, 0)
+        else:
+            self._scan_progress.setRange(0, 100)
+            pct = int(current / max(total, 1) * 100)
+            self._scan_progress.setValue(pct)
         self._scan_detail_label.setText(msg)
 
     def _on_scan_error(self, msg: str):
@@ -1053,7 +1155,9 @@ class MainPanel(QWidget):
         self._execute_btn.setEnabled(False)
         self._execute_btn.setText("กำลังดำเนินการ...")
 
-        self._scan_worker = ExecuteScanWorker(named)
+        self._scan_worker = ExecuteScanWorker(
+            named, custom_dest_dir=self._get_custom_dest_dir(),
+        )
         self._scan_worker.status_message.connect(
             lambda msg: self._scan_status_label.setText(msg)
         )

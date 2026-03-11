@@ -17,22 +17,21 @@ class FileOrganizer:
         event_folder_path: str,
         person_name: str,
         matched_photo_paths: List[str],
+        custom_dest_dir: Optional[str] = None,
         on_progress: Optional[Callable] = None,
         is_cancelled: Optional[Callable] = None,
     ) -> dict:
-        """Create person subfolders at each directory level that has matched photos.
+        """Create person subfolders and copy matched photos.
 
-        For each subdirectory containing matched photos, creates:
-            <that_directory>/<person_name>/
-        and copies the matched photos from that directory into it.
+        If custom_dest_dir is None (default):
+            For each subdirectory containing matched photos, creates:
+                <that_directory>/<person_name>/
+
+        If custom_dest_dir is set:
+            Creates a single folder: <custom_dest_dir>/<person_name>/
+            Files are renamed to <source_folder>_<filename> to avoid collisions.
         """
         safe_name = FileOrganizer._sanitize_folder_name(person_name)
-
-        # Group photos by their parent directory
-        photos_by_dir: Dict[str, List[str]] = defaultdict(list)
-        for path in matched_photo_paths:
-            parent = os.path.dirname(path)
-            photos_by_dir[parent].append(path)
 
         copied = 0
         skipped = 0
@@ -41,17 +40,20 @@ class FileOrganizer:
         output_folders = []
         progress_count = 0
 
-        for parent_dir, photos in photos_by_dir.items():
-            output_dir = os.path.join(parent_dir, safe_name)
+        if custom_dest_dir:
+            # Custom destination: single folder, prefix filenames with source folder name
+            output_dir = os.path.join(custom_dest_dir, safe_name)
             os.makedirs(output_dir, exist_ok=True)
             output_folders.append(output_dir)
 
-            for src_path in photos:
+            for src_path in matched_photo_paths:
                 if is_cancelled and is_cancelled():
                     break
 
+                parent_name = os.path.basename(os.path.dirname(src_path))
                 filename = os.path.basename(src_path)
-                dst_path = os.path.join(output_dir, filename)
+                new_filename = f"{parent_name}_{filename}"
+                dst_path = os.path.join(output_dir, new_filename)
 
                 try:
                     if os.path.exists(dst_path):
@@ -66,6 +68,38 @@ class FileOrganizer:
                 progress_count += 1
                 if on_progress:
                     on_progress(progress_count, total)
+        else:
+            # Default: group by parent directory
+            photos_by_dir: Dict[str, List[str]] = defaultdict(list)
+            for path in matched_photo_paths:
+                parent = os.path.dirname(path)
+                photos_by_dir[parent].append(path)
+
+            for parent_dir, photos in photos_by_dir.items():
+                output_dir = os.path.join(parent_dir, safe_name)
+                os.makedirs(output_dir, exist_ok=True)
+                output_folders.append(output_dir)
+
+                for src_path in photos:
+                    if is_cancelled and is_cancelled():
+                        break
+
+                    filename = os.path.basename(src_path)
+                    dst_path = os.path.join(output_dir, filename)
+
+                    try:
+                        if os.path.exists(dst_path):
+                            skipped += 1
+                        else:
+                            shutil.copy2(src_path, dst_path)
+                            copied += 1
+                    except Exception as e:
+                        logger.error(f"Failed to copy {src_path}: {e}")
+                        errors += 1
+
+                    progress_count += 1
+                    if on_progress:
+                        on_progress(progress_count, total)
 
         return {
             "output_folder": output_folders[0] if output_folders else event_folder_path,
@@ -79,6 +113,7 @@ class FileOrganizer:
     def organize_all_persons(
         event_folder_path: str,
         person_matches: Dict[str, List[str]],
+        custom_dest_dir: Optional[str] = None,
         on_progress: Optional[Callable] = None,
         is_cancelled: Optional[Callable] = None,
     ) -> dict:
@@ -94,6 +129,7 @@ class FileOrganizer:
                 event_folder_path=event_folder_path,
                 person_name=person_name,
                 matched_photo_paths=photo_paths,
+                custom_dest_dir=custom_dest_dir,
                 on_progress=lambda c, t: on_progress(person_name, c, t) if on_progress else None,
                 is_cancelled=is_cancelled,
             )

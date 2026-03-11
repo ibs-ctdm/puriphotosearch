@@ -110,11 +110,17 @@ class ScanClusterWorker(BaseWorker):
                 f"พบ {len(all_faces)} ใบหน้า กำลังจัดกลุ่ม..."
             )
 
+            # Indeterminate progress during clustering
+            self.progress.emit(0, 0, "กำลังจัดกลุ่มใบหน้า...")
+
             # Cluster
             clusters = cluster_faces(all_faces, self.threshold)
 
-            # Generate thumbnails for best face in each cluster
-            for c in clusters:
+            # Generate thumbnails for best face in each cluster (with progress)
+            self.status_message.emit(
+                f"พบ {len(clusters)} กลุ่ม กำลังสร้างภาพตัวอย่าง..."
+            )
+            for i, c in enumerate(clusters):
                 bf = c["best_face"]
                 try:
                     c["thumbnail"] = _make_face_thumbnail(
@@ -122,6 +128,10 @@ class ScanClusterWorker(BaseWorker):
                     )
                 except Exception:
                     c["thumbnail"] = None
+                self.progress.emit(
+                    i + 1, len(clusters),
+                    f"สร้างภาพตัวอย่าง {i + 1}/{len(clusters)}",
+                )
 
             self.finished_with_result.emit({
                 "clusters": clusters,
@@ -150,10 +160,12 @@ class ScanClusterWorker(BaseWorker):
 class ExecuteScanWorker(BaseWorker):
     """Execute: merge same-name clusters, optionally copy photos, add new persons to DB."""
 
-    def __init__(self, named_clusters: list, skip_file_organize: bool = False, parent=None):
+    def __init__(self, named_clusters: list, skip_file_organize: bool = False,
+                 custom_dest_dir: str = None, parent=None):
         super().__init__(parent)
         self.named_clusters = named_clusters  # [{name, cluster}, ...]
         self.skip_file_organize = skip_file_organize
+        self.custom_dest_dir = custom_dest_dir
 
     def run(self):
         try:
@@ -194,6 +206,7 @@ class ExecuteScanWorker(BaseWorker):
                         event_folder_path="",
                         person_name=name,
                         matched_photo_paths=photo_paths,
+                        custom_dest_dir=self.custom_dest_dir,
                         is_cancelled=self.is_cancelled,
                     )
                     copied_count = org_result.get("copied", 0)
