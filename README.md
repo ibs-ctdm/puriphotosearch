@@ -1,6 +1,6 @@
 # PuriPhotoSearch
 
-โปรแกรมค้นหาและจัดเรียงรูปภาพด้วยการจดจำใบหน้า สำหรับ macOS
+โปรแกรมค้นหาและจัดเรียงรูปภาพด้วยการจดจำใบหน้า สำหรับ macOS และ Windows
 
 ![PuriPhotoSearch](PuriPhotoSearch.png)
 
