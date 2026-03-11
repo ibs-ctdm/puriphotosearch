@@ -53,15 +53,19 @@ class FaceService:
         root = os.environ.get("INSIGHTFACE_HOME", "~/.insightface")
         logger.info(f"Loading model from root: {root}")
 
-        self._face_app = FaceAnalysis(
-            name=model_name,
-            root=root,
-            providers=["CPUExecutionProvider"],
-            allowed_modules=["detection", "recognition"],
-        )
-        self._face_app.prepare(ctx_id=0, det_size=DETECTION_SIZE)
-        self._is_loaded = True
-        logger.info("Face model loaded successfully")
+        try:
+            self._face_app = FaceAnalysis(
+                name=model_name,
+                root=root,
+                providers=["CPUExecutionProvider"],
+                allowed_modules=["detection", "recognition"],
+            )
+            self._face_app.prepare(ctx_id=0, det_size=DETECTION_SIZE)
+            self._is_loaded = True
+            logger.info("Face model loaded successfully")
+        except Exception:
+            self._face_app = None
+            raise
 
     def _ensure_loaded(self) -> None:
         if not self._is_loaded:

@@ -219,8 +219,7 @@ class MainWindow(QMainWindow):
 
     def _on_model_error(self, message):
         self._model_dot.setStyleSheet("background: #FF3B30; border-radius: 5px;")
-        self._model_dot.setToolTip("โมเดล: เกิดข้อผิดพลาด")
-        QMessageBox.critical(self, "ข้อผิดพลาดโมเดล", message)
+        self._model_dot.setToolTip(f"โมเดล: {message}")
 
     def _on_person_changed(self):
         self._update_db_stats()
