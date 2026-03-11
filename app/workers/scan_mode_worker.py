@@ -148,11 +148,12 @@ class ScanClusterWorker(BaseWorker):
 
 
 class ExecuteScanWorker(BaseWorker):
-    """Execute: merge same-name clusters, copy photos, add new persons to DB."""
+    """Execute: merge same-name clusters, optionally copy photos, add new persons to DB."""
 
-    def __init__(self, named_clusters: list, parent=None):
+    def __init__(self, named_clusters: list, skip_file_organize: bool = False, parent=None):
         super().__init__(parent)
         self.named_clusters = named_clusters  # [{name, cluster}, ...]
+        self.skip_file_organize = skip_file_organize
 
     def run(self):
         try:
@@ -164,6 +165,7 @@ class ExecuteScanWorker(BaseWorker):
             total = len(grouped)
             persons_added = 0
             photos_copied = 0
+            person_details = []  # per-person summary
 
             for i, (name, clusters) in enumerate(grouped.items()):
                 if self.is_cancelled():
@@ -184,19 +186,23 @@ class ExecuteScanWorker(BaseWorker):
                         person_id = cluster.get("person_id")
 
                 # 1) Copy photos to person folders (grouped by parent dir)
-                photo_paths = list({f["photo_path"] for f in all_faces})
-                org_result = FileOrganizer.organize_single_person(
-                    event_folder_path="",
-                    person_name=name,
-                    matched_photo_paths=photo_paths,
-                    is_cancelled=self.is_cancelled,
-                )
-                photos_copied += org_result.get("copied", 0)
+                copied_count = 0
+                org_result = {}
+                if not self.skip_file_organize:
+                    photo_paths = list({f["photo_path"] for f in all_faces})
+                    org_result = FileOrganizer.organize_single_person(
+                        event_folder_path="",
+                        person_name=name,
+                        matched_photo_paths=photo_paths,
+                        is_cancelled=self.is_cancelled,
+                    )
+                    copied_count = org_result.get("copied", 0)
+                photos_copied += copied_count
 
                 # 2) Add to DB if new person (not already in DB)
                 if not is_known:
                     diverse = select_diverse_embeddings(
-                        all_faces, max_count=5,
+                        all_faces, max_count=6,
                     )
 
                     # Add first as primary
@@ -232,12 +238,20 @@ class ExecuteScanWorker(BaseWorker):
                             thumbnail=thumb,
                         )
 
+                person_details.append({
+                    "name": name,
+                    "copied": copied_count,
+                    "output_folders": org_result.get("output_folders", []),
+                    "is_new": not is_known,
+                })
+
                 self.progress.emit(i + 1, total, name)
 
             self.finished_with_result.emit({
                 "persons_added": persons_added,
                 "photos_copied": photos_copied,
                 "total_processed": total,
+                "person_details": person_details,
             })
 
         except Exception as e:

@@ -7,7 +7,7 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 
 APP_NAME = "PuriPhotoSearch"
-APP_VERSION = "1.7.0"
+APP_VERSION = "1.8.0"
 
 # Platform-aware data paths
 if sys.platform == "darwin":
@@ -43,6 +43,7 @@ class AppConfig:
     # UI preferences
     thumbnail_size: int = 200
     results_per_page: int = 50
+    person_view_mode: str = "card"
 
     # Processing
     batch_commit_size: int = 20

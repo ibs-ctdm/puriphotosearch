@@ -78,7 +78,11 @@ def main():
     style_path = os.path.join(BUNDLE_DIR, "resources", "styles", "app.qss")
     if os.path.exists(style_path):
         with open(style_path) as f:
-            app.setStyleSheet(f.read())
+            style = f.read()
+        # Inject absolute path for QSS url() references (works in dev + PyInstaller)
+        checkmark = os.path.join(BUNDLE_DIR, "resources", "styles", "checkmark.svg")
+        style = style.replace("{{CHECKMARK_PATH}}", checkmark.replace("\\", "/"))
+        app.setStyleSheet(style)
 
     # Initialize database
     init_database()

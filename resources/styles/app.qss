@@ -66,6 +66,7 @@ QLineEdit {
     background: white;
     color: #1D1D1F;
     selection-background-color: #FFF3E8;
+    selection-color: #1D1D1F;
 }
 
 QLineEdit:focus {
@@ -289,6 +290,24 @@ QTreeWidget::branch:has-children:open {
 
 QTreeWidget::branch:has-children:closed {
     image: none;
+}
+
+QTreeWidget::indicator {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #8E8E93;
+    border-radius: 4px;
+    background: white;
+}
+
+QTreeWidget::indicator:checked {
+    border: 2px solid #F5811F;
+    background: #F5811F;
+    image: url({{CHECKMARK_PATH}});
+}
+
+QTreeWidget::indicator:unchecked:hover {
+    border: 2px solid #F5811F;
 }
 
 /* ===== Dialogs ===== */

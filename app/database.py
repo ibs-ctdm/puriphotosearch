@@ -123,7 +123,21 @@ def _create_tables() -> None:
                 created_at TEXT DEFAULT (datetime('now'))
             );
             CREATE INDEX IF NOT EXISTS idx_faces_photo ON faces(photo_id);
+
+            CREATE TABLE IF NOT EXISTS person_groups (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                created_at TEXT DEFAULT (datetime('now'))
+            );
         """)
+
+        # Migration: add group_name column if it doesn't exist
+        try:
+            conn.execute("ALTER TABLE persons ADD COLUMN group_name TEXT DEFAULT NULL")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_persons_group ON persons(group_name)")
         conn.commit()
     finally:
         conn.close()
@@ -131,11 +145,15 @@ def _create_tables() -> None:
 
 # --- Person CRUD ---
 
-def add_person(name: str, photo_path: str, embedding: np.ndarray, thumbnail: bytes) -> int:
+def add_person(name: str, photo_path: str, embedding: np.ndarray, thumbnail: bytes,
+               group_name: str = None) -> int:
     """Insert a new person with their first embedding (marked as primary). Returns person ID."""
     conn = get_connection()
     try:
-        cursor = conn.execute("INSERT INTO persons (name) VALUES (?)", (name,))
+        cursor = conn.execute(
+            "INSERT INTO persons (name, group_name) VALUES (?, ?)",
+            (name, group_name),
+        )
         person_id = cursor.lastrowid
         conn.execute(
             "INSERT INTO person_embeddings "
@@ -190,7 +208,7 @@ def get_all_persons() -> list:
     conn = get_connection()
     try:
         persons_rows = conn.execute(
-            "SELECT id, name, created_at FROM persons ORDER BY name"
+            "SELECT id, name, group_name, created_at FROM persons ORDER BY name"
         ).fetchall()
 
         persons = []
@@ -215,6 +233,7 @@ def get_all_persons() -> list:
             persons.append({
                 "id": pid,
                 "name": prow["name"],
+                "group_name": prow["group_name"],
                 "embeddings": embeddings,
                 "thumbnail": thumbnail,
                 "embedding_count": len(embeddings),
@@ -359,5 +378,78 @@ def get_db_stats() -> dict:
             "photos": photo_count,
             "faces": face_count,
         }
+    finally:
+        conn.close()
+
+
+# --- Person Groups ---
+
+def get_all_groups() -> list:
+    """Return all distinct group names, sorted alphabetically."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT name FROM person_groups "
+            "UNION "
+            "SELECT DISTINCT group_name FROM persons WHERE group_name IS NOT NULL "
+            "ORDER BY name"
+        ).fetchall()
+        return [row[0] for row in rows]
+    finally:
+        conn.close()
+
+
+def create_group(name: str) -> None:
+    """Create a named group (empty, ready to assign persons)."""
+    conn = get_connection()
+    try:
+        conn.execute("INSERT OR IGNORE INTO person_groups (name) VALUES (?)", (name,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def set_person_group(person_id: int, group_name) -> None:
+    """Assign a person to a group (or remove from group if None)."""
+    conn = get_connection()
+    try:
+        conn.execute(
+            "UPDATE persons SET group_name = ?, updated_at = datetime('now') WHERE id = ?",
+            (group_name, person_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def rename_group(old_name: str, new_name: str) -> None:
+    """Rename a group (updates all persons in that group + group table)."""
+    conn = get_connection()
+    try:
+        conn.execute(
+            "UPDATE persons SET group_name = ?, updated_at = datetime('now') "
+            "WHERE group_name = ?",
+            (new_name, old_name),
+        )
+        conn.execute(
+            "UPDATE person_groups SET name = ? WHERE name = ?",
+            (new_name, old_name),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def delete_group(group_name: str) -> None:
+    """Delete a group (unassign all persons, remove from group table)."""
+    conn = get_connection()
+    try:
+        conn.execute(
+            "UPDATE persons SET group_name = NULL, updated_at = datetime('now') "
+            "WHERE group_name = ?",
+            (group_name,),
+        )
+        conn.execute("DELETE FROM person_groups WHERE name = ?", (group_name,))
+        conn.commit()
     finally:
         conn.close()

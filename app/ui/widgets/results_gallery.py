@@ -1,4 +1,4 @@
-"""Photo grid results display with similarity scores."""
+"""Photo grid results display with similarity scores, grouped by folder."""
 
 import os
 import sys
@@ -8,14 +8,14 @@ from PySide6.QtCore import Qt, QTimer, Property
 from PySide6.QtGui import QPainter, QColor, QFont
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QScrollArea, QGridLayout,
+    QScrollArea, QGridLayout, QStyle,
 )
 
 from app.ui.widgets.photo_thumbnail import PhotoThumbnail
 
 
 class ResultsGallery(QWidget):
-    """Gallery widget showing search results as a grid of thumbnails."""
+    """Gallery widget showing search results grouped by folder."""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -34,33 +34,23 @@ class ResultsGallery(QWidget):
         self.detail_label.setStyleSheet("color: #86868B;")
         layout.addWidget(self.detail_label)
 
-        # Open folder button
-        btn_layout = QHBoxLayout()
-        self.open_folder_btn = QPushButton("เปิดโฟลเดอร์ผลลัพธ์ใน Finder")
-        self.open_folder_btn.setVisible(False)
-        self.open_folder_btn.clicked.connect(self._open_folder)
-        btn_layout.addWidget(self.open_folder_btn)
-        btn_layout.addStretch()
-        layout.addLayout(btn_layout)
-
-        # Scroll area for photo grid
+        # Scroll area for folder sections
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll.setStyleSheet("QScrollArea { border: none; }")
 
-        self.grid_container = QWidget()
-        self.grid_layout = QGridLayout(self.grid_container)
-        self.grid_layout.setSpacing(8)
-        self.grid_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        self.scroll_content = QWidget()
+        self.content_layout = QVBoxLayout(self.scroll_content)
+        self.content_layout.setSpacing(12)
+        self.content_layout.setAlignment(Qt.AlignTop)
 
-        self.scroll.setWidget(self.grid_container)
+        self.scroll.setWidget(self.scroll_content)
         layout.addWidget(self.scroll)
 
         # Loading overlay (hidden by default)
         self._loading_widget = SpinnerWidget(self.scroll)
         self._loading_widget.setVisible(False)
-
-        self._output_folder = None
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -82,71 +72,138 @@ class ResultsGallery(QWidget):
 
     def clear(self):
         """Clear all results."""
-        while self.grid_layout.count():
-            item = self.grid_layout.takeAt(0)
+        while self.content_layout.count():
+            item = self.content_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
         self.header_label.setText("")
         self.detail_label.setText("")
-        self.open_folder_btn.setVisible(False)
-        self._output_folder = None
 
-    def show_single_person_results(self, person_name: str, matches: list, organized: dict = None):
-        """Display results for a single person search."""
+    def show_folder_grouped_results(self, folder_results: list, person_name: str = None):
+        """Display results grouped by source folder.
+
+        Args:
+            folder_results: list of dicts with keys:
+                folder_name, folder_path, matches, open_folder, copied
+            person_name: if single-person mode, the person's name
+        """
         self.clear()
 
-        if not matches:
-            self.header_label.setText(f"ไม่พบรูปภาพของ {person_name}")
+        folders_with_matches = [fr for fr in folder_results if fr.get("matches")]
+        total_matches = sum(len(fr["matches"]) for fr in folders_with_matches)
+        total_copied = sum(fr.get("copied", 0) for fr in folder_results)
+
+        if not folders_with_matches:
+            if person_name:
+                self.header_label.setText(f"ไม่พบรูปภาพของ {person_name}")
+            else:
+                self.header_label.setText("ไม่พบรูปภาพ")
             return
 
-        self.header_label.setText(f"พบ {len(matches)} รูปภาพของ {person_name}")
-
-        if organized:
-            self._output_folder = organized.get("output_folder")
-            self.detail_label.setText(
-                f"คัดลอก {organized['copied']} รูปไปที่: {self._output_folder}"
+        if person_name:
+            self.header_label.setText(f"พบ {total_matches} รูปภาพของ {person_name}")
+        else:
+            self.header_label.setText(
+                f"พบ {total_matches} รูปภาพ จาก {len(folders_with_matches)} โฟลเดอร์"
             )
-            self.open_folder_btn.setVisible(True)
 
-        self._populate_grid(matches)
+        if total_copied > 0:
+            self.detail_label.setText(f"คัดลอก {total_copied} รูป")
 
-    def show_all_persons_results(self, search_results: dict, organized: dict = None):
-        """Display results for all-persons search."""
+        for fr in folders_with_matches:
+            # Folder header (clickable to open output folder)
+            header = self._make_folder_header(
+                fr["folder_name"],
+                len(fr["matches"]),
+                fr.get("open_folder", fr["folder_path"]),
+            )
+            self.content_layout.addWidget(header)
+
+            # Photo grid for this folder
+            grid_widget = self._make_photo_grid(fr["matches"])
+            self.content_layout.addWidget(grid_widget)
+
+        self.content_layout.addStretch()
+
+    def show_person_grouped_results(self, person_results: list):
+        """Display results grouped by person.
+
+        Args:
+            person_results: list of dicts with keys:
+                person_name, matches, folders [{display_name, path}], copied
+        """
         self.clear()
 
-        total_matches = sum(
-            len(data["matches"]) for data in search_results.values()
-        )
-        persons_found = len(search_results)
+        results_with_matches = [pr for pr in person_results if pr.get("matches")]
+        total_matches = sum(len(pr["matches"]) for pr in results_with_matches)
+        total_copied = sum(pr.get("copied", 0) for pr in person_results)
+
+        if not results_with_matches:
+            self.header_label.setText("ไม่พบรูปภาพ")
+            return
 
         self.header_label.setText(
-            f"พบ {total_matches} รูปภาพ จาก {persons_found} บุคคล"
+            f"พบ {total_matches} รูปภาพ ของ {len(results_with_matches)} คน"
         )
+        if total_copied > 0:
+            self.detail_label.setText(f"คัดลอก {total_copied} รูป")
 
-        if organized:
-            self.detail_label.setText(
-                f"จัดเรียง {organized['persons_organized']} โฟลเดอร์บุคคล, "
-                f"คัดลอก {organized['total_copied']} รูปทั้งหมด"
+        for pr in results_with_matches:
+            # Person name header
+            person_label = QLabel(f"{pr['person_name']}  ({len(pr['matches'])} รูป)")
+            person_label.setStyleSheet(
+                "font-size: 15px; font-weight: bold; color: #1D1D1F;"
+                "padding: 8px 0 2px 0;"
             )
+            self.content_layout.addWidget(person_label)
 
-            if organized.get("details"):
-                self._output_folder = organized["details"][0].get("output_folder", "")
-                if self._output_folder:
-                    import os
-                    self._output_folder = os.path.dirname(self._output_folder)
-                self.open_folder_btn.setVisible(True)
+            # Folder buttons
+            for folder_info in pr.get("folders", []):
+                btn = self._make_folder_header(
+                    folder_info["display_name"], 0, folder_info["path"],
+                )
+                self.content_layout.addWidget(btn)
 
-        # Show matches grouped by person
-        all_matches = []
-        for person_id, data in search_results.items():
-            for match in data["matches"]:
-                match["person_name"] = data["name"]
-                all_matches.append(match)
+            # Photo grid
+            grid = self._make_photo_grid(pr["matches"])
+            self.content_layout.addWidget(grid)
 
-        all_matches.sort(key=lambda x: x["similarity"], reverse=True)
-        self._populate_grid(all_matches[:200])
+        self.content_layout.addStretch()
 
-    def _populate_grid(self, matches: list, cols: int = 5):
+    def _make_folder_header(self, folder_name: str, match_count: int, open_folder: str) -> QWidget:
+        """Create a clickable folder header row."""
+        text = f"  {folder_name}  ({match_count} รูป)" if match_count else f"  {folder_name}"
+        btn = QPushButton(text)
+        btn.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.setStyleSheet("""
+            QPushButton {
+                text-align: left;
+                font-size: 13px;
+                font-weight: bold;
+                color: #1D1D1F;
+                border: none;
+                background: #F5F5F7;
+                border-radius: 6px;
+                padding: 8px 12px;
+            }
+            QPushButton:hover {
+                background: #FFF3E8;
+                color: #F5811F;
+            }
+        """)
+        if open_folder:
+            btn.clicked.connect(lambda checked, p=open_folder: self._open_path(p))
+        return btn
+
+    def _make_photo_grid(self, matches: list, cols: int = 5) -> QWidget:
+        """Create a grid of photo thumbnails."""
+        grid_widget = QWidget()
+        grid_layout = QGridLayout(grid_widget)
+        grid_layout.setSpacing(8)
+        grid_layout.setContentsMargins(0, 0, 0, 0)
+        grid_layout.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+
         for i, match in enumerate(matches):
             thumb = PhotoThumbnail(
                 file_path=match["file_path"],
@@ -154,7 +211,9 @@ class ResultsGallery(QWidget):
                 similarity=match["similarity"],
             )
             thumb.clicked.connect(self._on_photo_clicked)
-            self.grid_layout.addWidget(thumb, i // cols, i % cols)
+            grid_layout.addWidget(thumb, i // cols, i % cols)
+
+        return grid_widget
 
     def _on_photo_clicked(self, file_path: str):
         """Open photo in default viewer."""
@@ -165,14 +224,15 @@ class ResultsGallery(QWidget):
         else:
             subprocess.run(["xdg-open", file_path], check=False)
 
-    def _open_folder(self):
-        if self._output_folder:
+    def _open_path(self, path: str):
+        """Open a folder in the system file manager."""
+        if os.path.isdir(path):
             if sys.platform == "darwin":
-                subprocess.run(["open", self._output_folder], check=False)
+                subprocess.run(["open", path], check=False)
             elif sys.platform == "win32":
-                os.startfile(self._output_folder)
+                os.startfile(path)
             else:
-                subprocess.run(["xdg-open", self._output_folder], check=False)
+                subprocess.run(["xdg-open", path], check=False)
 
 
 class SpinnerWidget(QWidget):
