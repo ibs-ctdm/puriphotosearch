@@ -1082,10 +1082,20 @@ class MainPanel(QWidget):
         else:
             self._merge_btn.setText("รวมเป็นคนเดียว")
 
+    def _save_typed_names(self):
+        """Save all currently typed names back to cluster data."""
+        for name_input, cluster in self._name_inputs:
+            typed = name_input.text().strip()
+            if typed:
+                cluster["person_name"] = typed
+
     def _merge_selected(self):
         selected_indices = [idx for cb, idx in self._merge_checkboxes if cb.isChecked()]
         if len(selected_indices) < 2:
             return
+
+        # Save all typed names before rebuilding
+        self._save_typed_names()
 
         # Confirmation dialog
         reply = QMessageBox.question(
