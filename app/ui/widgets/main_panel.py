@@ -122,8 +122,24 @@ class MainPanel(QWidget):
         self._person_filter.textChanged.connect(self._filter_persons)
         layout.addWidget(self._person_filter)
 
-        # Select all / deselect all + threshold on same row
+        # Collapse/expand + Select all / deselect all + threshold on same row
         sel_row = QHBoxLayout()
+
+        self._person_collapse_btn = QPushButton("▼")
+        self._person_collapse_btn.setFixedSize(26, 26)
+        self._person_collapse_btn.setCursor(Qt.PointingHandCursor)
+        self._person_collapse_btn.setToolTip("ยุบทั้งหมด")
+        self._person_collapse_btn.setStyleSheet("""
+            QPushButton {
+                border: none; background: transparent; padding: 0;
+                font-size: 15px; color: #F5811F; font-weight: bold;
+            }
+            QPushButton:hover { background: #FFF3E8; border-radius: 4px; }
+        """)
+        self._person_tree_expanded = True
+        self._person_collapse_btn.clicked.connect(self._toggle_person_tree_collapse)
+        sel_row.addWidget(self._person_collapse_btn)
+
         sel_all_btn = QPushButton("เลือกทั้งหมด")
         sel_all_btn.setStyleSheet("font-size: 12px; padding: 3px 10px;")
         sel_all_btn.clicked.connect(self._select_all_persons)
@@ -295,6 +311,18 @@ class MainPanel(QWidget):
                     visible_children += 1
             # Hide group header if all children are hidden
             group_item.setHidden(visible_children == 0 and bool(text_lower))
+
+    def _toggle_person_tree_collapse(self):
+        """Toggle collapse/expand all person tree groups."""
+        if self._person_tree_expanded:
+            self._person_tree.collapseAll()
+            self._person_collapse_btn.setText("▶")
+            self._person_collapse_btn.setToolTip("ขยายทั้งหมด")
+        else:
+            self._person_tree.expandAll()
+            self._person_collapse_btn.setText("▼")
+            self._person_collapse_btn.setToolTip("ยุบทั้งหมด")
+        self._person_tree_expanded = not self._person_tree_expanded
 
     def _select_all_persons(self):
         self._updating_person_checks = True
