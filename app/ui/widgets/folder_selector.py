@@ -60,7 +60,7 @@ class FolderSelector(QWidget):
         # Subfolder tree (4 columns: Folder, Open, Photos, Faces)
         self.subfolder_tree = QTreeWidget()
         self.subfolder_tree.setColumnCount(4)
-        self.subfolder_tree.setHeaderLabels(["      โฟลเดอร์", "", "รูป", "หน้า"])
+        self.subfolder_tree.setHeaderLabels(["             โฟลเดอร์", "", "รูป", "หน้า"])
         self.subfolder_tree.header().setStretchLastSection(False)
         self.subfolder_tree.header().setSectionResizeMode(0, QHeaderView.Stretch)
         self.subfolder_tree.header().setSectionResizeMode(1, QHeaderView.Fixed)
@@ -119,9 +119,31 @@ class FolderSelector(QWidget):
         from PySide6.QtWidgets import QCheckBox
         self._header_checkbox = QCheckBox(self.subfolder_tree.header())
         self._header_checkbox.setFixedSize(18, 18)
-        self._header_checkbox.setStyleSheet("""
-            QCheckBox::indicator { width: 14px; height: 14px; }
-            QCheckBox::indicator:checked { background: #F5811F; border: 1px solid #F5811F; border-radius: 3px; }
+
+        # Paint a white checkmark icon for the checked state
+        check_img_path = os.path.join(arrow_dir, "check.png")
+        ck_px = QPixmap(14, 14)
+        ck_px.fill(Qt.transparent)
+        ck_p = QPainter(ck_px)
+        ck_p.setRenderHint(QPainter.Antialiasing)
+        from PySide6.QtGui import QPen
+        pen = QPen(QColor("white"))
+        pen.setWidth(2)
+        pen.setCapStyle(Qt.RoundCap)
+        pen.setJoinStyle(Qt.RoundJoin)
+        ck_p.setPen(pen)
+        ck_p.drawLine(3, 7, 6, 10)
+        ck_p.drawLine(6, 10, 11, 4)
+        ck_p.end()
+        ck_px.save(check_img_path)
+        check_img = check_img_path.replace("\\", "/")
+
+        self._header_checkbox.setStyleSheet(f"""
+            QCheckBox::indicator {{ width: 14px; height: 14px; }}
+            QCheckBox::indicator:checked {{
+                background: #F5811F; border: 1px solid #F5811F; border-radius: 3px;
+                image: url({check_img});
+            }}
         """)
         self._header_checkbox.stateChanged.connect(self._on_header_checkbox_changed)
 
