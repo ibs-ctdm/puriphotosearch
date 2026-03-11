@@ -40,7 +40,7 @@ class ProgressDialog(QDialog):
     def update_progress(self, current: int, total: int, message: str = ""):
         percent = int(current / max(total, 1) * 100)
         self.progress_bar.setValue(percent)
-        self.status_label.setText(f"{current} / {total}")
+        self.status_label.setText(f"{current:,} / {total:,}")
         if message:
             self.detail_label.setText(message)
 

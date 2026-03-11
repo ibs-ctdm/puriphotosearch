@@ -109,8 +109,8 @@ app = BUNDLE(
     info_plist={
         "CFBundleName": "PuriPhotoSearch",
         "CFBundleDisplayName": "Puri Photo Search",
-        "CFBundleVersion": "1.8.4",
-        "CFBundleShortVersionString": "1.8.4",
+        "CFBundleVersion": "1.8.5",
+        "CFBundleShortVersionString": "1.8.5",
         "NSHighResolutionCapable": True,
         "LSMinimumSystemVersion": "11.0",
         "NSPhotoLibraryUsageDescription": (

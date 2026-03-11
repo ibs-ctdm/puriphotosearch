@@ -53,6 +53,7 @@ class MainPanel(QWidget):
         self.folder_panel = FolderSelector(self.config)
         self.folder_panel.folder_changed.connect(self._on_folder_changed)
         self.folder_panel.processing_complete.connect(self._on_processing_complete)
+        self.folder_panel.processing_cancelled.connect(self._on_processing_cancelled)
         splitter.addWidget(self.folder_panel)
 
         # === RIGHT: Tabs ===
@@ -72,7 +73,7 @@ class MainPanel(QWidget):
             }
             QTabBar::tab {
                 padding: 10px 20px;
-                font-size: 13px;
+                font-size: 15px;
                 border: none;
                 border-bottom: 2px solid transparent;
                 background: white;
@@ -970,9 +971,9 @@ class MainPanel(QWidget):
         unknown = len(self._clusters) - known
 
         self._scan_result_summary.setText(
-            f"พบ {len(self._clusters)} คน จาก {total_faces} ใบหน้า "
-            f"ใน {total_photos} รูป  "
-            f"({known} คนในฐานข้อมูล, {unknown} คนใหม่)"
+            f"พบ {len(self._clusters):,} คน จาก {total_faces:,} ใบหน้า "
+            f"ใน {total_photos:,} รูป  "
+            f"({known:,} คนในฐานข้อมูล, {unknown:,} คนใหม่)"
         )
 
         self._build_cluster_cards()
@@ -1030,7 +1031,7 @@ class MainPanel(QWidget):
         info_col.setSpacing(4)
 
         photo_count = len({f["photo_path"] for f in cluster["faces"]})
-        count_label = QLabel(f"พบ {photo_count} รูป")
+        count_label = QLabel(f"พบ {photo_count:,} รูป")
         count_label.setStyleSheet("font-size: 13px; color: #424245; font-weight: bold;")
         info_col.addWidget(count_label)
 
@@ -1077,7 +1078,7 @@ class MainPanel(QWidget):
         checked = sum(1 for cb, _ in self._merge_checkboxes if cb.isChecked())
         self._merge_btn.setEnabled(checked >= 2)
         if checked >= 2:
-            self._merge_btn.setText(f"รวม {checked} กลุ่มเป็นคนเดียว")
+            self._merge_btn.setText(f"รวม {checked:,} กลุ่มเป็นคนเดียว")
         else:
             self._merge_btn.setText("รวมเป็นคนเดียว")
 
@@ -1089,7 +1090,7 @@ class MainPanel(QWidget):
         # Confirmation dialog
         reply = QMessageBox.question(
             self, "ยืนยันการรวม",
-            f"ยืนยันรวม {len(selected_indices)} รายการเป็นคนเดียว?",
+            f"ยืนยันรวม {len(selected_indices):,} รายการเป็นคนเดียว?",
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
@@ -1139,8 +1140,8 @@ class MainPanel(QWidget):
         known = sum(1 for c in self._clusters if c["is_known"])
         unknown = len(self._clusters) - known
         self._scan_result_summary.setText(
-            f"พบ {len(self._clusters)} คน จาก {total_faces} ใบหน้า  "
-            f"({known} คนในฐานข้อมูล, {unknown} คนใหม่)"
+            f"พบ {len(self._clusters):,} คน จาก {total_faces:,} ใบหน้า  "
+            f"({known:,} คนในฐานข้อมูล, {unknown:,} คนใหม่)"
         )
 
     def _execute_scan(self):
@@ -1172,7 +1173,7 @@ class MainPanel(QWidget):
         self._scan_worker.start()
 
     def _on_exec_progress(self, current: int, total: int, msg: str):
-        self._execute_btn.setText(f"กำลังดำเนินการ... ({current}/{total})")
+        self._execute_btn.setText(f"กำลังดำเนินการ... ({current:,}/{total:,})")
 
     def _on_exec_done(self, result: dict):
         self._execute_btn.setEnabled(True)
@@ -1193,8 +1194,8 @@ class MainPanel(QWidget):
         self._scan_stack.setCurrentIndex(0)
 
         self._summary_header.setText(
-            f"ดำเนินการเสร็จสิ้น — {total} คน, คัดลอก {copied} รูป"
-            + (f", เพิ่มบุคคลใหม่ {added} คน" if added > 0 else "")
+            f"ดำเนินการเสร็จสิ้น — {total:,} คน, คัดลอก {copied:,} รูป"
+            + (f", เพิ่มบุคคลใหม่ {added:,} คน" if added > 0 else "")
         )
         self._summary_header.setVisible(True)
 
@@ -1242,3 +1243,17 @@ class MainPanel(QWidget):
     def _on_processing_complete(self):
         self.refresh_data()
         self.processing_complete.emit()
+
+    def _on_processing_cancelled(self):
+        """Reset UI when folder processing is cancelled."""
+        # Reset search tab if it was waiting for processing
+        self.search_btn.setEnabled(True)
+        self.results_gallery.hide_loading()
+        self.results_gallery.setVisible(False)
+        self._person_tree.setVisible(True)
+
+        # Reset scan tab if it was in progress
+        if hasattr(self, '_scan_worker') and self._scan_worker:
+            self._scan_worker.cancel()
+            self._scan_worker = None
+        self.refresh_data()

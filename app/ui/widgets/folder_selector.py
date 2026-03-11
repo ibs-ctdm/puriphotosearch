@@ -23,6 +23,7 @@ class FolderSelector(QWidget):
 
     folder_changed = Signal(str)
     processing_complete = Signal()
+    processing_cancelled = Signal()
     folder_count_changed = Signal(int)
 
     def __init__(self, config, parent=None):
@@ -118,11 +119,11 @@ class FolderSelector(QWidget):
         # Header checkbox (select all / deselect all) — overlaid on column 0
         from PySide6.QtWidgets import QCheckBox
         self._header_checkbox = QCheckBox(self.subfolder_tree.header())
-        self._header_checkbox.setFixedSize(18, 18)
+        self._header_checkbox.setFixedSize(22, 22)
 
         # Paint a white checkmark icon for the checked state
         check_img_path = os.path.join(arrow_dir, "check.png")
-        ck_px = QPixmap(14, 14)
+        ck_px = QPixmap(18, 18)
         ck_px.fill(Qt.transparent)
         ck_p = QPainter(ck_px)
         ck_p.setRenderHint(QPainter.Antialiasing)
@@ -132,14 +133,17 @@ class FolderSelector(QWidget):
         pen.setCapStyle(Qt.RoundCap)
         pen.setJoinStyle(Qt.RoundJoin)
         ck_p.setPen(pen)
-        ck_p.drawLine(3, 7, 6, 10)
-        ck_p.drawLine(6, 10, 11, 4)
+        ck_p.drawLine(4, 9, 7, 13)
+        ck_p.drawLine(7, 13, 14, 5)
         ck_p.end()
         ck_px.save(check_img_path)
         check_img = check_img_path.replace("\\", "/")
 
         self._header_checkbox.setStyleSheet(f"""
-            QCheckBox::indicator {{ width: 14px; height: 14px; }}
+            QCheckBox::indicator {{ width: 18px; height: 18px; }}
+            QCheckBox::indicator:unchecked {{
+                background: white; border: 1px solid #C7C7CC; border-radius: 3px;
+            }}
             QCheckBox::indicator:checked {{
                 background: #F5811F; border: 1px solid #F5811F; border-radius: 3px;
                 image: url({check_img});
@@ -150,13 +154,13 @@ class FolderSelector(QWidget):
         # Collapse/Expand toggle button — overlaid on column 0
         self._all_expanded = True
         self._collapse_btn = QPushButton("▼", self.subfolder_tree.header())
-        self._collapse_btn.setFixedSize(22, 22)
+        self._collapse_btn.setFixedSize(26, 26)
         self._collapse_btn.setCursor(Qt.PointingHandCursor)
         self._collapse_btn.setToolTip("ยุบทั้งหมด")
         self._collapse_btn.setStyleSheet("""
             QPushButton {
                 border: none; background: transparent; padding: 0;
-                font-size: 11px; color: #F5811F; font-weight: bold;
+                font-size: 15px; color: #F5811F; font-weight: bold;
             }
             QPushButton:hover { background: #FFF3E8; border-radius: 4px; }
         """)
@@ -319,7 +323,7 @@ class FolderSelector(QWidget):
         self.subfolder_tree.expandAll()
         self._updating_checks = False
 
-        self.summary_label.setText(f"พบ {folder_count} โฟลเดอร์")
+        self.summary_label.setText(f"พบ {folder_count:,} โฟลเดอร์")
         self.folder_count_changed.emit(folder_count)
 
     def _build_tree_item(self, dir_path: Path, db_folders: dict) -> QTreeWidgetItem | None:
@@ -355,12 +359,12 @@ class FolderSelector(QWidget):
         item.setIcon(1, self.style().standardIcon(QStyle.SP_DirOpenIcon))
 
         # Column 2: photo count
-        item.setText(2, str(photo_count))
+        item.setText(2, f"{photo_count:,}")
 
         # Column 3: combined status (faces + processed state)
         db_info = db_folders.get(str(dir_path))
         if db_info and db_info["is_processed"]:
-            item.setText(3, str(db_info['face_count']))
+            item.setText(3, f"{db_info['face_count']:,}")
             item.setForeground(3, Qt.darkGreen)
         else:
             item.setText(3, "รอ")
@@ -531,7 +535,7 @@ class FolderSelector(QWidget):
     def _on_progress(self, current, total, message):
         percent = int(current / max(total, 1) * 100)
         self.progress_bar.setValue(percent)
-        self.progress_detail.setText(f"{current}/{total}")
+        self.progress_detail.setText(f"{current:,}/{total:,}")
 
     def _on_folder_done(self, result):
         if self._processing_cancelled:
@@ -562,6 +566,10 @@ class FolderSelector(QWidget):
         self.cancel_btn.setEnabled(True)
         self.cancel_btn.setText("ยกเลิก")
         self._scan_subfolders()
+
+        if hasattr(self, '_auto_processing') and self._auto_processing:
+            self._auto_processing = False
+            self.processing_cancelled.emit()
 
     # -- Public API for MainPanel --
 

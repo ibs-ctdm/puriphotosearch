@@ -74,7 +74,7 @@ class ScanClusterWorker(BaseWorker):
                 return
 
             total = len(image_paths)
-            self.status_message.emit(f"พบ {total} รูปภาพ กำลังตรวจจับใบหน้า...")
+            self.status_message.emit(f"พบ {total:,} รูปภาพ กำลังตรวจจับใบหน้า...")
 
             # Detect faces in parallel
             all_faces = []
@@ -99,7 +99,7 @@ class ScanClusterWorker(BaseWorker):
 
                     self.progress.emit(
                         done, total,
-                        f"ตรวจจับใบหน้า {done}/{total}",
+                        f"ตรวจจับใบหน้า {done:,}/{total:,}",
                     )
 
             if not all_faces:
@@ -107,7 +107,7 @@ class ScanClusterWorker(BaseWorker):
                 return
 
             self.status_message.emit(
-                f"พบ {len(all_faces)} ใบหน้า กำลังจัดกลุ่ม..."
+                f"พบ {len(all_faces):,} ใบหน้า กำลังจัดกลุ่ม..."
             )
 
             # Indeterminate progress during clustering
@@ -118,7 +118,7 @@ class ScanClusterWorker(BaseWorker):
 
             # Generate thumbnails for best face in each cluster (with progress)
             self.status_message.emit(
-                f"พบ {len(clusters)} กลุ่ม กำลังสร้างภาพตัวอย่าง..."
+                f"พบ {len(clusters):,} กลุ่ม กำลังสร้างภาพตัวอย่าง..."
             )
             for i, c in enumerate(clusters):
                 bf = c["best_face"]
@@ -130,7 +130,7 @@ class ScanClusterWorker(BaseWorker):
                     c["thumbnail"] = None
                 self.progress.emit(
                     i + 1, len(clusters),
-                    f"สร้างภาพตัวอย่าง {i + 1}/{len(clusters)}",
+                    f"สร้างภาพตัวอย่าง {i + 1:,}/{len(clusters):,}",
                 )
 
             self.finished_with_result.emit({

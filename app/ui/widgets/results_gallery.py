@@ -101,14 +101,14 @@ class ResultsGallery(QWidget):
             return
 
         if person_name:
-            self.header_label.setText(f"พบ {total_matches} รูปภาพของ {person_name}")
+            self.header_label.setText(f"พบ {total_matches:,} รูปภาพของ {person_name}")
         else:
             self.header_label.setText(
-                f"พบ {total_matches} รูปภาพ จาก {len(folders_with_matches)} โฟลเดอร์"
+                f"พบ {total_matches:,} รูปภาพ จาก {len(folders_with_matches):,} โฟลเดอร์"
             )
 
         if total_copied > 0:
-            self.detail_label.setText(f"คัดลอก {total_copied} รูป")
+            self.detail_label.setText(f"คัดลอก {total_copied:,} รูป")
 
         for fr in folders_with_matches:
             # Folder header (clickable to open output folder)
@@ -143,14 +143,14 @@ class ResultsGallery(QWidget):
             return
 
         self.header_label.setText(
-            f"พบ {total_matches} รูปภาพ ของ {len(results_with_matches)} คน"
+            f"พบ {total_matches:,} รูปภาพ ของ {len(results_with_matches):,} คน"
         )
         if total_copied > 0:
-            self.detail_label.setText(f"คัดลอก {total_copied} รูป")
+            self.detail_label.setText(f"คัดลอก {total_copied:,} รูป")
 
         for pr in results_with_matches:
             # Person name header
-            person_label = QLabel(f"{pr['person_name']}  ({len(pr['matches'])} รูป)")
+            person_label = QLabel(f"{pr['person_name']}  ({len(pr['matches']):,} รูป)")
             person_label.setStyleSheet(
                 "font-size: 15px; font-weight: bold; color: #1D1D1F;"
                 "padding: 8px 0 2px 0;"
@@ -172,7 +172,7 @@ class ResultsGallery(QWidget):
 
     def _make_folder_header(self, folder_name: str, match_count: int, open_folder: str) -> QWidget:
         """Create a clickable folder header row."""
-        text = f"  {folder_name}  ({match_count} รูป)" if match_count else f"  {folder_name}"
+        text = f"  {folder_name}  ({match_count:,} รูป)" if match_count else f"  {folder_name}"
         btn = QPushButton(text)
         btn.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         btn.setCursor(Qt.PointingHandCursor)

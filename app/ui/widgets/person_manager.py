@@ -305,7 +305,7 @@ class PersonManager(QWidget):
                 ungrouped_count += 1
 
         # "ทั้งหมด" always at top
-        all_item = QListWidgetItem(f"ทั้งหมด ({len(self._persons)})")
+        all_item = QListWidgetItem(f"ทั้งหมด ({len(self._persons):,})")
         all_item.setData(Qt.UserRole, None)
         self.group_list.addItem(all_item)
 
@@ -313,12 +313,12 @@ class PersonManager(QWidget):
         groups = get_all_groups()
         for group_name in groups:
             count = group_counts.get(group_name, 0)
-            item = QListWidgetItem(f"{group_name} ({count})")
+            item = QListWidgetItem(f"{group_name} ({count:,})")
             item.setData(Qt.UserRole, group_name)
             self.group_list.addItem(item)
 
         # "ยังไม่จัดกลุ่ม" at the bottom
-        ungrouped_item = QListWidgetItem(f"ยังไม่จัดกลุ่ม ({ungrouped_count})")
+        ungrouped_item = QListWidgetItem(f"ยังไม่จัดกลุ่ม ({ungrouped_count:,})")
         ungrouped_item.setData(Qt.UserRole, "__ungrouped__")
         self.group_list.addItem(ungrouped_item)
 
@@ -503,7 +503,7 @@ class PersonManager(QWidget):
     def refresh_persons(self):
         """Reload all persons from database and rebuild the grid."""
         self._persons = get_all_persons()
-        self.count_label.setText(f"({len(self._persons)} คน)")
+        self.count_label.setText(f"({len(self._persons):,} คน)")
 
         # Rebuild card view
         self.flow_container = QWidget()

@@ -157,11 +157,11 @@ class EventProcessor(QWidget):
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
             item.setText(0, name)
             item.setCheckState(0, Qt.Checked)
-            item.setText(1, str(photo_count))
+            item.setText(1, f"{photo_count:,}")
             item.setData(0, Qt.UserRole, path)
 
             if db_info and db_info["is_processed"]:
-                item.setText(2, str(db_info["face_count"]))
+                item.setText(2, f"{db_info['face_count']:,}")
                 item.setText(3, "\u2705 เสร็จแล้ว")
                 item.setForeground(3, Qt.darkGreen)
             else:
@@ -291,7 +291,7 @@ class EventProcessor(QWidget):
     def _on_progress(self, current, total, message):
         percent = int(current / max(total, 1) * 100)
         self.progress_bar.setValue(percent)
-        self.progress_detail.setText(f"{current}/{total} - {message}")
+        self.progress_detail.setText(f"{current:,}/{total:,} - {message}")
 
     def _on_folder_done(self, result):
         if self._processing_cancelled:

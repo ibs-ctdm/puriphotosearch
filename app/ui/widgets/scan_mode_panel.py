@@ -224,9 +224,9 @@ class ScanModePanel(QWidget):
         unknown = len(self._clusters) - known
 
         self._result_summary.setText(
-            f"พบ {len(self._clusters)} คน จาก {total_faces} ใบหน้า "
-            f"ใน {total_photos} รูป  "
-            f"({known} คนในฐานข้อมูล, {unknown} คนใหม่)"
+            f"พบ {len(self._clusters):,} คน จาก {total_faces:,} ใบหน้า "
+            f"ใน {total_photos:,} รูป  "
+            f"({known:,} คนในฐานข้อมูล, {unknown:,} คนใหม่)"
         )
 
         self._build_cluster_cards()
@@ -279,7 +279,7 @@ class ScanModePanel(QWidget):
         info_col.setSpacing(4)
 
         photo_count = len({f["photo_path"] for f in cluster["faces"]})
-        count_label = QLabel(f"พบ {photo_count} รูป")
+        count_label = QLabel(f"พบ {photo_count:,} รูป")
         count_label.setStyleSheet("font-size: 13px; color: #424245; font-weight: bold;")
         info_col.addWidget(count_label)
 
@@ -343,7 +343,7 @@ class ScanModePanel(QWidget):
         self._worker.start()
 
     def _on_exec_progress(self, current: int, total: int, msg: str):
-        self._execute_btn.setText(f"กำลังดำเนินการ... ({current}/{total})")
+        self._execute_btn.setText(f"กำลังดำเนินการ... ({current:,}/{total:,})")
 
     def _on_exec_done(self, result: dict):
         self._execute_btn.setEnabled(True)
@@ -355,9 +355,9 @@ class ScanModePanel(QWidget):
 
         QMessageBox.information(
             self, "เสร็จสิ้น",
-            f"ดำเนินการ {total} คนเสร็จแล้ว\n"
-            f"คัดลอกรูป: {copied} รูป\n"
-            f"เพิ่มบุคคลใหม่: {added} คน",
+            f"ดำเนินการ {total:,} คนเสร็จแล้ว\n"
+            f"คัดลอกรูป: {copied:,} รูป\n"
+            f"เพิ่มบุคคลใหม่: {added:,} คน",
         )
 
         if added > 0:

@@ -70,8 +70,8 @@ class SettingsDialog(QDialog):
 
         stats = get_db_stats()
         stats_label = QLabel(
-            f"บุคคล: {stats['persons']}  |  กิจกรรม: {stats['events']}  |  "
-            f"รูปภาพ: {stats['photos']}  |  ใบหน้า: {stats['faces']}"
+            f"บุคคล: {stats['persons']:,}  |  กิจกรรม: {stats['events']:,}  |  "
+            f"รูปภาพ: {stats['photos']:,}  |  ใบหน้า: {stats['faces']:,}"
         )
         db_layout.addWidget(stats_label)
 

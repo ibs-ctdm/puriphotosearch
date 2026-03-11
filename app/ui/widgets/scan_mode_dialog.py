@@ -151,7 +151,7 @@ class ScanModeDialog(QDialog):
             return None
 
         item = QTreeWidgetItem()
-        base_text = f"{dir_path.name}    ({photo_count} รูป)" if photo_count else dir_path.name
+        base_text = f"{dir_path.name}    ({photo_count:,} รูป)" if photo_count else dir_path.name
         item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
         item.setCheckState(0, Qt.Unchecked)
         item.setData(0, Qt.UserRole, str(dir_path))
@@ -430,8 +430,8 @@ class ScanModeDialog(QDialog):
         known = sum(1 for c in self._clusters if c["is_known"])
         unknown = len(self._clusters) - known
         self._result_summary.setText(
-            f"พบ {len(self._clusters)} กลุ่ม จาก {total_faces} ใบหน้า  "
-            f"({known} คนในฐานข้อมูล, {unknown} คนใหม่)"
+            f"พบ {len(self._clusters):,} กลุ่ม จาก {total_faces:,} ใบหน้า  "
+            f"({known:,} คนในฐานข้อมูล, {unknown:,} คนใหม่)"
         )
 
     def _build_cluster_cards(self):
@@ -495,7 +495,7 @@ class ScanModeDialog(QDialog):
         info_col.setSpacing(3)
 
         photo_count = len({f["photo_path"] for f in cluster["faces"]})
-        count_label = QLabel(f"พบ {photo_count} รูป")
+        count_label = QLabel(f"พบ {photo_count:,} รูป")
         count_label.setStyleSheet("font-size: 12px; color: #424245; font-weight: bold; border: none;")
         info_col.addWidget(count_label)
 
@@ -555,7 +555,7 @@ class ScanModeDialog(QDialog):
         checked = sum(1 for cb, _ in self._merge_checkboxes if cb.isChecked())
         self._merge_btn.setEnabled(checked >= 2)
         if checked >= 2:
-            self._merge_btn.setText(f"รวม {checked} กลุ่มเป็นคนเดียว")
+            self._merge_btn.setText(f"รวม {checked:,} กลุ่มเป็นคนเดียว")
         else:
             self._merge_btn.setText("รวมเป็นคนเดียว")
 
@@ -615,7 +615,7 @@ class ScanModeDialog(QDialog):
         self._worker.start()
 
     def _on_exec_progress(self, current: int, total: int, msg: str):
-        self._execute_btn.setText(f"กำลังเพิ่ม... ({current}/{total})")
+        self._execute_btn.setText(f"กำลังเพิ่ม... ({current:,}/{total:,})")
 
     def _on_exec_done(self, result: dict):
         self._execute_btn.setEnabled(True)
@@ -626,7 +626,7 @@ class ScanModeDialog(QDialog):
 
         QMessageBox.information(
             self, "เสร็จสิ้น",
-            f"เพิ่มบุคคลใหม่ {added} คน จากทั้งหมด {total} คน",
+            f"เพิ่มบุคคลใหม่ {added:,} คน จากทั้งหมด {total:,} คน",
         )
 
         if added > 0:

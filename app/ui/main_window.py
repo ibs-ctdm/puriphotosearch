@@ -89,7 +89,7 @@ class MainWindow(QMainWindow):
         logo_label.setStyleSheet("background: transparent; border: none;")
         if os.path.exists(_ICON_PATH):
             pixmap = QPixmap(_ICON_PATH).scaled(
-                QSize(80, 36), Qt.KeepAspectRatio, Qt.SmoothTransformation
+                QSize(110, 42), Qt.KeepAspectRatio, Qt.SmoothTransformation
             )
             logo_label.setPixmap(pixmap)
         else:
@@ -116,7 +116,7 @@ class MainWindow(QMainWindow):
                     border: none;
                     border-bottom: 2px solid transparent;
                     padding: 12px 16px;
-                    font-size: 13px;
+                    font-size: 15px;
                     font-weight: 500;
                 }
                 QPushButton:checked {
@@ -227,7 +227,7 @@ class MainWindow(QMainWindow):
 
     def _on_folder_count_changed(self, count: int):
         if count > 0:
-            self._folder_stats_label.setText(f"พบ {count} โฟลเดอร์")
+            self._folder_stats_label.setText(f"พบ {count:,} โฟลเดอร์")
         else:
             self._folder_stats_label.setText("")
 
@@ -237,7 +237,7 @@ class MainWindow(QMainWindow):
     def _update_db_stats(self):
         stats = get_db_stats()
         self.db_stats_label.setText(
-            f"บุคคล: {stats['persons']}  |  รูปภาพ: {stats['photos']}  |  ใบหน้า: {stats['faces']}"
+            f"บุคคล: {stats['persons']:,}  |  รูปภาพ: {stats['photos']:,}  |  ใบหน้า: {stats['faces']:,}"
         )
 
     def _show_settings(self):
