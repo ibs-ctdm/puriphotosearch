@@ -9,15 +9,41 @@ import cv2
 import numpy as np
 from insightface.app import FaceAnalysis
 
+try:
+    import rawpy
+    HAS_RAWPY = True
+except ImportError:
+    HAS_RAWPY = False
+
 logger = logging.getLogger(__name__)
 
 DETECTION_SIZE = (640, 640)
 EMBEDDING_DIM = 512
 MAX_IMAGE_DIM = 1280
 
+RAW_EXTENSIONS = {
+    ".arw", ".cr2", ".cr3", ".nef", ".nrw", ".orf", ".raf",
+    ".rw2", ".pef", ".srw", ".dng", ".raw", ".3fr", ".erf",
+}
+
 
 def _imread_safe(path: str) -> Optional[np.ndarray]:
-    """Read image with Unicode path support (Windows compatibility)."""
+    """Read image with Unicode path support (Windows compatibility).
+    Supports RAW camera files via rawpy if available.
+    """
+    ext = os.path.splitext(path)[1].lower()
+
+    # RAW file: convert via rawpy
+    if ext in RAW_EXTENSIONS and HAS_RAWPY:
+        try:
+            with rawpy.imread(path) as raw:
+                rgb = raw.postprocess()
+            return cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+        except Exception as e:
+            logger.warning(f"RAW decode failed for {path}: {e}")
+            return None
+
+    # Standard image: read via OpenCV
     try:
         data = np.fromfile(path, dtype=np.uint8)
         return cv2.imdecode(data, cv2.IMREAD_COLOR)

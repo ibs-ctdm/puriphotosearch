@@ -60,6 +60,8 @@ a = Analysis(
         "scipy.special",
         "albumentations",
         "charset_normalizer",
+        "rawpy",
+        "rawpy._rawpy",
     ],
     hookspath=[],
     runtime_hooks=[],

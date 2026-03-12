@@ -61,6 +61,8 @@ a = Analysis(
         "scipy.special",
         "albumentations",
         "charset_normalizer",
+        "rawpy",
+        "rawpy._rawpy",
     ],
     hookspath=[],
     runtime_hooks=[],
@@ -109,8 +111,8 @@ app = BUNDLE(
     info_plist={
         "CFBundleName": "PuriPhotoSearch",
         "CFBundleDisplayName": "Puri Photo Search",
-        "CFBundleVersion": "1.8.7",
-        "CFBundleShortVersionString": "1.8.7",
+        "CFBundleVersion": "1.8.9",
+        "CFBundleShortVersionString": "1.8.9",
         "NSHighResolutionCapable": True,
         "LSMinimumSystemVersion": "11.0",
         "NSPhotoLibraryUsageDescription": (

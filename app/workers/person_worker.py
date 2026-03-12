@@ -5,14 +5,13 @@ import numpy as np
 from PySide6.QtCore import Signal
 
 from app.workers.base_worker import BaseWorker
-from app.services.face_service import face_service
+from app.services.face_service import face_service, _imread_safe
 from app.database import add_person, add_person_embedding
 
 
 def _make_thumbnail(photo_path: str) -> bytes:
     """Generate a 150x150 center-crop JPEG thumbnail from a photo."""
-    data = np.fromfile(photo_path, dtype=np.uint8)
-    img = cv2.imdecode(data, cv2.IMREAD_COLOR)
+    img = _imread_safe(photo_path)
     if img is None:
         raise ValueError(f"Cannot read image: {photo_path}")
     h, w = img.shape[:2]

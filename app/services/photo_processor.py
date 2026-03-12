@@ -10,11 +10,16 @@ from typing import Callable, List, Optional, Tuple
 import cv2
 import numpy as np
 
-from app.services.face_service import face_service
+from app.services.face_service import face_service, _imread_safe
 
 logger = logging.getLogger(__name__)
 
-IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff", ".tif"}
+IMAGE_EXTENSIONS = {
+    ".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff", ".tif",
+    # RAW camera formats
+    ".arw", ".cr2", ".cr3", ".nef", ".nrw", ".orf", ".raf",
+    ".rw2", ".pef", ".srw", ".dng", ".raw", ".3fr", ".erf",
+}
 MAX_WORKERS = 4
 BATCH_SIZE = 20
 
@@ -105,8 +110,7 @@ class PhotoProcessor:
 
                     # Get image dimensions
                     try:
-                        raw = np.fromfile(image_path, dtype=np.uint8)
-                        img = cv2.imdecode(raw, cv2.IMREAD_COLOR)
+                        img = _imread_safe(image_path)
                         h, w = img.shape[:2] if img is not None else (0, 0)
                     except Exception:
                         h, w = 0, 0

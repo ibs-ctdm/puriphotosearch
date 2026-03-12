@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 
 from app.workers.base_worker import BaseWorker
-from app.services.face_service import face_service
+from app.services.face_service import face_service, _imread_safe
 from app.services.face_cluster_service import cluster_faces, select_diverse_embeddings
 from app.services.file_organizer import FileOrganizer
 from app.services.photo_processor import IMAGE_EXTENSIONS
@@ -23,8 +23,7 @@ MAX_WORKERS = 4
 
 def _make_face_thumbnail(image_path: str, bbox, size: int = 150) -> bytes:
     """Crop face from image using bbox and return JPEG thumbnail bytes."""
-    data = np.fromfile(image_path, dtype=np.uint8)
-    img = cv2.imdecode(data, cv2.IMREAD_COLOR)
+    img = _imread_safe(image_path)
     if img is None:
         raise ValueError(f"Cannot read: {image_path}")
 

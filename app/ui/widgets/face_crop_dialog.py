@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QWidget, QMessageBox,
 )
 
-from app.services.face_service import face_service
+from app.services.face_service import face_service, _imread_safe
 
 logger = logging.getLogger(__name__)
 
@@ -140,8 +140,7 @@ class FaceCropDialog(QDialog):
     # ── Init ──────────────────────────────────────────────────────
 
     def _load_image(self):
-        raw = np.fromfile(self._photo_path, dtype=np.uint8)
-        self._cv_image = cv2.imdecode(raw, cv2.IMREAD_COLOR)
+        self._cv_image = _imread_safe(self._photo_path)
 
     def _detect_faces(self):
         try:
