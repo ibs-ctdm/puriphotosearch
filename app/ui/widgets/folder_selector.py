@@ -316,6 +316,35 @@ class FolderSelector(QWidget):
                     self.subfolder_tree.addTopLevelItem(item)
                     folder_count += self._count_tree_items(item)
 
+        # Leaf folder: if no subfolders found, check if selected folder
+        # itself contains images and add it as a single item
+        if folder_count == 0:
+            folder_path = Path(folder)
+            photo_count = sum(
+                1 for f in folder_path.iterdir()
+                if f.is_file() and f.suffix.lower() in IMAGE_EXTENSIONS
+            )
+            if photo_count > 0:
+                item = QTreeWidgetItem()
+                item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+                item.setCheckState(0, Qt.Checked)
+                item.setData(0, Qt.UserRole, str(folder_path))
+                item.setData(0, Qt.UserRole + 1, folder_path.name)
+                item.setText(0, folder_path.name)
+                item.setIcon(1, self.style().standardIcon(QStyle.SP_DirOpenIcon))
+                item.setText(2, f"{photo_count:,}")
+
+                db_info = db_folders.get(str(folder_path))
+                if db_info and db_info["is_processed"]:
+                    item.setText(3, f"{db_info['face_count']:,}")
+                    item.setForeground(3, Qt.darkGreen)
+                else:
+                    item.setText(3, "รอ")
+                    item.setForeground(3, Qt.darkYellow)
+
+                self.subfolder_tree.addTopLevelItem(item)
+                folder_count = 1
+
         # Restore checked paths
         if checked_paths:
             self._restore_check_states(checked_paths)
