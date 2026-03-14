@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QPainter, QPixmap, QColor, QPainterPath
+from PySide6.QtGui import QPainter, QPixmap, QColor, QPainterPath, QFont
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QFileDialog, QTreeWidget, QTreeWidgetItem,
@@ -25,6 +25,7 @@ class FolderSelector(QWidget):
     processing_complete = Signal()
     processing_cancelled = Signal()
     folder_count_changed = Signal(int)
+    view_faces_requested = Signal(str)  # folder_path → open cluster dialog from DB
 
     def __init__(self, config, parent=None):
         super().__init__(parent)
@@ -248,11 +249,18 @@ class FolderSelector(QWidget):
     # -- Folder browsing --
 
     def _on_tree_item_clicked(self, item, column):
-        """Single-click on icon column (1) opens folder in Finder."""
+        """Single-click on icon column (1) opens folder in Finder.
+        Single-click on face count column (3) opens cluster dialog from DB.
+        """
         if column == 1:
             path = item.data(0, Qt.UserRole)
             if path and os.path.isdir(path):
                 subprocess.run(["open", path], check=False)
+        elif column == 3:
+            path = item.data(0, Qt.UserRole)
+            face_text = item.text(3).replace(",", "")
+            if path and face_text.isdigit() and int(face_text) > 0:
+                self.view_faces_requested.emit(path)
 
     def _open_folder_in_finder(self, item, column):
         path = item.data(0, Qt.UserRole)
@@ -336,8 +344,16 @@ class FolderSelector(QWidget):
 
                 db_info = db_folders.get(str(folder_path))
                 if db_info and db_info["is_processed"]:
-                    item.setText(3, f"{db_info['face_count']:,}")
-                    item.setForeground(3, Qt.darkGreen)
+                    fc = db_info['face_count']
+                    item.setText(3, f"{fc:,}")
+                    if fc > 0:
+                        item.setForeground(3, QColor("#F5811F"))
+                        font = item.font(3)
+                        font.setUnderline(True)
+                        item.setFont(3, font)
+                        item.setToolTip(3, "คลิกเพื่อดูใบหน้าที่สแกนแล้ว")
+                    else:
+                        item.setForeground(3, Qt.darkGreen)
                 else:
                     item.setText(3, "รอ")
                     item.setForeground(3, Qt.darkYellow)
@@ -393,8 +409,16 @@ class FolderSelector(QWidget):
         # Column 3: combined status (faces + processed state)
         db_info = db_folders.get(str(dir_path))
         if db_info and db_info["is_processed"]:
-            item.setText(3, f"{db_info['face_count']:,}")
-            item.setForeground(3, Qt.darkGreen)
+            face_count = db_info['face_count']
+            item.setText(3, f"{face_count:,}")
+            if face_count > 0:
+                item.setForeground(3, QColor("#F5811F"))
+                font = item.font(3)
+                font.setUnderline(True)
+                item.setFont(3, font)
+                item.setToolTip(3, "คลิกเพื่อดูใบหน้าที่สแกนแล้ว")
+            else:
+                item.setForeground(3, Qt.darkGreen)
         else:
             item.setText(3, "รอ")
             item.setForeground(3, Qt.darkYellow)

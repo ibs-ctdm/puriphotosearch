@@ -14,7 +14,10 @@ from app.services.face_service import face_service, _imread_safe
 from app.services.face_cluster_service import cluster_faces, select_diverse_embeddings
 from app.services.file_organizer import FileOrganizer
 from app.services.photo_processor import IMAGE_EXTENSIONS
-from app.database import add_person, add_person_embedding
+from app.database import (
+    add_person, add_person_embedding,
+    add_or_get_event_folder, get_faces_for_event_folder,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +157,73 @@ class ScanClusterWorker(BaseWorker):
             }
             for r in results
         ]
+
+
+class DBClusterWorker(BaseWorker):
+    """Cluster faces from DB (already processed folder) without re-scanning."""
+
+    def __init__(self, folder_path: str, threshold: float = 0.45, parent=None):
+        super().__init__(parent)
+        self.folder_path = folder_path
+        self.threshold = threshold
+
+    def run(self):
+        try:
+            self.status_message.emit("กำลังโหลดข้อมูลใบหน้าจากฐานข้อมูล...")
+            self.progress.emit(0, 0, "กำลังโหลดข้อมูล...")
+
+            # Get event folder ID
+            event_folder_id = add_or_get_event_folder(self.folder_path)
+
+            # Load faces from DB
+            all_faces = get_faces_for_event_folder(event_folder_id)
+            if not all_faces:
+                self.error.emit("ไม่พบข้อมูลใบหน้าในฐานข้อมูล")
+                return
+
+            if self.is_cancelled():
+                return
+
+            # Cluster
+            self.status_message.emit(
+                f"พบ {len(all_faces):,} ใบหน้า กำลังจัดกลุ่ม..."
+            )
+            self.progress.emit(0, 0, "กำลังจัดกลุ่มใบหน้า...")
+            clusters = cluster_faces(all_faces, self.threshold)
+
+            if self.is_cancelled():
+                return
+
+            # Generate thumbnails
+            self.status_message.emit(
+                f"พบ {len(clusters):,} กลุ่ม กำลังสร้างภาพตัวอย่าง..."
+            )
+            for i, c in enumerate(clusters):
+                if self.is_cancelled():
+                    return
+                bf = c["best_face"]
+                try:
+                    c["thumbnail"] = _make_face_thumbnail(
+                        bf["photo_path"], bf["bbox"],
+                    )
+                except Exception:
+                    c["thumbnail"] = None
+                self.progress.emit(
+                    i + 1, len(clusters),
+                    f"สร้างภาพตัวอย่าง {i + 1:,}/{len(clusters):,}",
+                )
+
+            # Count unique photos
+            total_photos = len({f["photo_path"] for f in all_faces})
+
+            self.finished_with_result.emit({
+                "clusters": clusters,
+                "total_photos": total_photos,
+                "total_faces": len(all_faces),
+            })
+
+        except Exception as e:
+            self.error.emit(f"เกิดข้อผิดพลาด: {str(e)}")
 
 
 class ExecuteScanWorker(BaseWorker):

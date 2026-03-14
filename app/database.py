@@ -334,6 +334,30 @@ def get_all_event_folders() -> list:
         conn.close()
 
 
+def get_faces_for_event_folder(event_folder_id: int) -> list:
+    """Get all detected faces for a processed event folder."""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT f.embedding, f.bbox_x1, f.bbox_y1, f.bbox_x2, f.bbox_y2, "
+            "f.confidence, p.file_path "
+            "FROM faces f JOIN photos p ON f.photo_id = p.id "
+            "WHERE p.event_folder_id = ?",
+            (event_folder_id,),
+        ).fetchall()
+        return [
+            {
+                "embedding": np.frombuffer(row["embedding"], dtype=np.float32).copy(),
+                "bbox": [row["bbox_x1"], row["bbox_y1"], row["bbox_x2"], row["bbox_y2"]],
+                "confidence": row["confidence"],
+                "photo_path": row["file_path"],
+            }
+            for row in rows
+        ]
+    finally:
+        conn.close()
+
+
 def get_processed_event_folders() -> list:
     """Return only processed event folders."""
     conn = get_connection()

@@ -19,7 +19,7 @@ from app.database import (
     add_or_get_event_folder,
 )
 from app.workers.search_worker import SearchAllWorker
-from app.workers.scan_mode_worker import ScanClusterWorker, ExecuteScanWorker
+from app.workers.scan_mode_worker import ScanClusterWorker, ExecuteScanWorker, DBClusterWorker
 from app.ui.widgets.folder_selector import FolderSelector
 from app.ui.widgets.results_gallery import ResultsGallery
 
@@ -54,6 +54,7 @@ class MainPanel(QWidget):
         self.folder_panel.folder_changed.connect(self._on_folder_changed)
         self.folder_panel.processing_complete.connect(self._on_processing_complete)
         self.folder_panel.processing_cancelled.connect(self._on_processing_cancelled)
+        self.folder_panel.view_faces_requested.connect(self._view_faces_from_db)
         splitter.addWidget(self.folder_panel)
 
         # === RIGHT: Tabs ===
@@ -976,6 +977,30 @@ class MainPanel(QWidget):
         if self._scan_worker:
             self._scan_worker.cancel()
         self._scan_stack.setCurrentIndex(0)
+
+    def _view_faces_from_db(self, folder_path: str):
+        """Open cluster dialog from already-processed DB data (no re-scan)."""
+        # Switch to scan tab
+        self.tabs.setCurrentIndex(0)
+
+        # Hide summary from previous run
+        self._summary_header.setVisible(False)
+        self._summary_table.setVisible(False)
+        self._summary_hint.setVisible(False)
+
+        self._scan_stack.setCurrentIndex(1)
+        self._scan_progress.setValue(0)
+        self._scan_detail_label.setText("")
+
+        threshold = self.config.similarity_threshold
+        self._scan_worker = DBClusterWorker(folder_path, threshold)
+        self._scan_worker.status_message.connect(
+            lambda msg: self._scan_status_label.setText(msg)
+        )
+        self._scan_worker.progress.connect(self._on_scan_progress)
+        self._scan_worker.finished_with_result.connect(self._on_scan_done)
+        self._scan_worker.error.connect(self._on_scan_error)
+        self._scan_worker.start()
 
     def _on_scan_progress(self, current: int, total: int, msg: str):
         if total == 0:
