@@ -7,7 +7,7 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 
 APP_NAME = "PuriPhotoSearch"
-APP_VERSION = "1.9.0"
+APP_VERSION = "1.9.1"
 
 # Platform-aware data paths
 if sys.platform == "darwin":
