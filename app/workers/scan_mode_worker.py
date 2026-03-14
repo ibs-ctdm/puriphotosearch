@@ -17,6 +17,7 @@ from app.services.photo_processor import IMAGE_EXTENSIONS
 from app.database import (
     add_person, add_person_embedding,
     add_or_get_event_folder, get_faces_for_event_folder,
+    save_scan_faces,
 )
 
 logger = logging.getLogger(__name__)
@@ -107,6 +108,9 @@ class ScanClusterWorker(BaseWorker):
             if not all_faces:
                 self.error.emit("ไม่พบใบหน้าในรูปภาพ")
                 return
+
+            # Save to DB so folder tree can show face counts immediately
+            save_scan_faces(all_faces)
 
             self.status_message.emit(
                 f"พบ {len(all_faces):,} ใบหน้า กำลังจัดกลุ่ม..."

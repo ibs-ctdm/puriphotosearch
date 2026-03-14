@@ -1304,6 +1304,7 @@ class MainPanel(QWidget):
         self.refresh_data()
 
     def _on_processing_complete(self):
+        self.folder_panel._scan_subfolders()
         self.refresh_data()
         self.processing_complete.emit()
 

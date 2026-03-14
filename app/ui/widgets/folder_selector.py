@@ -304,9 +304,35 @@ class FolderSelector(QWidget):
         for i in range(self.subfolder_tree.topLevelItemCount()):
             _restore(self.subfolder_tree.topLevelItem(i))
 
+    def _get_expanded_paths(self) -> set:
+        """Collect paths of all expanded items."""
+        paths = set()
+        def _collect(item):
+            if item.isExpanded():
+                path = item.data(0, Qt.UserRole)
+                if path:
+                    paths.add(path)
+            for i in range(item.childCount()):
+                _collect(item.child(i))
+        for i in range(self.subfolder_tree.topLevelItemCount()):
+            _collect(self.subfolder_tree.topLevelItem(i))
+        return paths
+
+    def _restore_expanded_states(self, expanded_paths: set):
+        """Restore expand/collapse states from a set of paths."""
+        def _restore(item):
+            path = item.data(0, Qt.UserRole)
+            if path and path in expanded_paths:
+                item.setExpanded(True)
+            for i in range(item.childCount()):
+                _restore(item.child(i))
+        for i in range(self.subfolder_tree.topLevelItemCount()):
+            _restore(self.subfolder_tree.topLevelItem(i))
+
     def _scan_subfolders(self):
-        # Preserve check states across refresh
+        # Preserve states across refresh
         checked_paths = self._get_all_checked_paths()
+        expanded_paths = self._get_expanded_paths()
 
         self.subfolder_tree.clear()
         folder = self.folder_input.text()
@@ -361,11 +387,13 @@ class FolderSelector(QWidget):
                 self.subfolder_tree.addTopLevelItem(item)
                 folder_count = 1
 
-        # Restore checked paths
+        # Restore states
         if checked_paths:
             self._restore_check_states(checked_paths)
 
-        self.subfolder_tree.expandAll()
+        if expanded_paths:
+            self._restore_expanded_states(expanded_paths)
+
         self._updating_checks = False
 
         self.summary_label.setText(f"พบ {folder_count:,} โฟลเดอร์")

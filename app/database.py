@@ -334,6 +334,100 @@ def get_all_event_folders() -> list:
         conn.close()
 
 
+def save_scan_faces(all_faces: list) -> None:
+    """Save faces detected by scan mode to DB so folder tree shows counts.
+
+    Groups faces by folder → photo, creates event_folders/photos/faces records.
+    Skips photos that already exist in DB (safe for re-scan).
+    """
+    from collections import defaultdict
+
+    # Group by folder → photo
+    folder_photos = defaultdict(lambda: defaultdict(list))
+    for face in all_faces:
+        folder = os.path.dirname(face["photo_path"])
+        folder_photos[folder][face["photo_path"]].append(face)
+
+    conn = get_connection()
+    try:
+        for folder, photos in folder_photos.items():
+            # Get or create event folder
+            row = conn.execute(
+                "SELECT id FROM event_folders WHERE folder_path = ?", (folder,)
+            ).fetchone()
+            if row:
+                event_folder_id = row["id"]
+            else:
+                folder_name = os.path.basename(folder)
+                cursor = conn.execute(
+                    "INSERT INTO event_folders (folder_path, folder_name) "
+                    "VALUES (?, ?)",
+                    (folder, folder_name),
+                )
+                event_folder_id = cursor.lastrowid
+
+            total_photos = 0
+            total_faces = 0
+
+            for photo_path, faces in photos.items():
+                # Skip if already in DB
+                existing = conn.execute(
+                    "SELECT id FROM photos WHERE file_path = ?", (photo_path,)
+                ).fetchone()
+                if existing:
+                    total_photos += 1
+                    fc = conn.execute(
+                        "SELECT COUNT(*) FROM faces WHERE photo_id = ?",
+                        (existing["id"],),
+                    ).fetchone()[0]
+                    total_faces += fc
+                    continue
+
+                filename = os.path.basename(photo_path)
+                file_size = (
+                    os.path.getsize(photo_path)
+                    if os.path.exists(photo_path) else 0
+                )
+
+                cursor = conn.execute(
+                    "INSERT INTO photos "
+                    "(event_folder_id, file_path, filename, file_size, "
+                    "width, height, face_count, is_processed) "
+                    "VALUES (?, ?, ?, ?, 0, 0, ?, 1)",
+                    (event_folder_id, photo_path, filename,
+                     file_size, len(faces)),
+                )
+                photo_id = cursor.lastrowid
+
+                for face in faces:
+                    emb_blob = face["embedding"].astype(np.float32).tobytes()
+                    bbox = face["bbox"]
+                    conn.execute(
+                        "INSERT INTO faces "
+                        "(photo_id, embedding, bbox_x1, bbox_y1, "
+                        "bbox_x2, bbox_y2, confidence) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                        (photo_id, emb_blob,
+                         bbox[0], bbox[1], bbox[2], bbox[3],
+                         face["confidence"]),
+                    )
+
+                total_photos += 1
+                total_faces += len(faces)
+
+            # Update event folder counts
+            conn.execute(
+                "UPDATE event_folders SET photo_count = ?, face_count = ?, "
+                "is_processed = 1, processed_at = datetime('now') "
+                "WHERE id = ?",
+                (total_photos, total_faces, event_folder_id),
+            )
+
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def get_faces_for_event_folder(event_folder_id: int) -> list:
     """Get all detected faces for a processed event folder."""
     conn = get_connection()
